@@ -1,0 +1,21 @@
+# Render 一键部署配置
+# 你的应用同时包含前端和后端，只需要部署一个服务
+
+services:
+  - type: web
+    name: ai-resume-assistant
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: "18"
+      - key: PORT
+        value: "10000"
+      - key: COZE_API_KEY
+        sync: false  # 在 Render 控制台配置
+      - key: COZE_BOT_ID
+        sync: false
+      - key: COZEZE_API_URL
+        value: https://api.coze.cn

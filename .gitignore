@@ -1,0 +1,28 @@
+# 环境变量
+.env
+.env.local
+.env.*
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+
+# 操作系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+.trae/
+
+# 测试和临时文件
+test-*.js
+kill-port.js
+output.log
+*.log
+
+# 系统文件
+test-resume.pdf  # 测试用的简历，不需要上传
