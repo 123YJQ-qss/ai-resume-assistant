@@ -34,6 +34,11 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
+// 显式根路由：返回 index.html
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
 // 文件上传配置（内存存储，用于PDF解析）
 const upload = multer({ storage: multer.memoryStorage() });
 
