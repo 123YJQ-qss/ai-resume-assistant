@@ -29,16 +29,20 @@
             <div class="hero">
                 <div class="hero-badge">
                     <span class="badge-dot"></span>
-                    AI Agent · 产品 Demo
+                    基于 LLM 的智能求职辅助应用
                 </div>
                 <h1 class="hero-title">
-                    <span class="gradient-text">基于AI Agent的</span><br>
-                    智能简历分析助手
+                    <span class="gradient-text">职途AI</span>
                 </h1>
                 <p class="hero-desc">
-                    结合目标岗位JD，帮助用户发现简历与岗位要求之间的差距，<br>
-                    提供结构化优化建议。
+                    上传简历 + 目标岗位JD，AI 将逐维度分析匹配度，<br>
+                    生成结构化优化建议，助你更精准地定位改进方向。
                 </p>
+                <div class="hero-tags">
+                    <span class="hero-tag">岗位分析</span>
+                    <span class="hero-tag">简历匹配</span>
+                    <span class="hero-tag">AI优化建议</span>
+                </div>
                 <button class="btn-primary btn-large" onclick="navigateTo('input')">
                     开始分析
                     <span class="btn-arrow">→</span>
@@ -58,7 +62,7 @@
                         </svg>
                     </div>
                     <h3 class="feature-title">AI简历分析</h3>
-                    <p class="feature-desc">理解用户简历内容，识别经历、技能和能力优势，为后续匹配分析提供基础。</p>
+                    <p class="feature-desc">多维度解析简历内容，提取教育背景、工作经历、技能标签等结构化信息。</p>
                 </div>
 
                 <div class="feature-card">
@@ -69,7 +73,7 @@
                         </svg>
                     </div>
                     <h3 class="feature-title">岗位匹配分析</h3>
-                    <p class="feature-desc">结合目标岗位JD，分析用户与岗位要求之间的匹配程度，量化展示差距。</p>
+                    <p class="feature-desc">对照JD逐维度评估匹配度，从能力、经历、风险三个角度量化展示差距。</p>
                 </div>
 
                 <div class="feature-card">
@@ -79,7 +83,7 @@
                         </svg>
                     </div>
                     <h3 class="feature-title">AI优化建议</h3>
-                    <p class="feature-desc">基于分析结果，生成针对性的简历优化方向，帮助用户有目标地提升简历质量。</p>
+                    <p class="feature-desc">基于匹配分析结果，生成改写建议和补充方向，均有简历原文引用可追溯。</p>
                 </div>
             </div>
         </div>
@@ -191,7 +195,25 @@
         <div class="page-container">
             <div class="page-header">
                 <h2 class="page-title">简历分析</h2>
-                <p class="page-subtitle">上传简历并输入目标岗位，AI将为你提供专业的匹配分析</p>
+                <p class="page-subtitle">三步完成：上传简历 → 输入目标岗位 → 获取AI分析报告</p>
+            </div>
+
+            <!-- 步骤引导条 -->
+            <div class="step-guide">
+                <div class="guide-step active">
+                    <span class="guide-num">1</span>
+                    <span class="guide-label">上传简历</span>
+                </div>
+                <div class="guide-line"></div>
+                <div class="guide-step">
+                    <span class="guide-num">2</span>
+                    <span class="guide-label">输入岗位JD</span>
+                </div>
+                <div class="guide-line"></div>
+                <div class="guide-step">
+                    <span class="guide-num">3</span>
+                    <span class="guide-label">获取分析报告</span>
+                </div>
             </div>
 
             <div class="input-grid">
@@ -218,10 +240,10 @@
                         <div class="upload-success" id="uploadSuccess">
                             <div class="success-icon">✓</div>
                             <p class="success-name" id="fileName"></p>
-                            <p class="success-hint">简历上传成功</p>
+                            <p class="success-hint">简历上传成功，可输入JD继续</p>
                         </div>
                     </div>
-                    <p class="card-hint">用于分析你的教育背景、项目经历和技能能力</p>
+                    <p class="card-hint">AI 将解析你的教育背景、项目经历和技能，用于匹配分析</p>
                 </div>
 
                 <!-- 岗位JD输入区域 -->
@@ -233,19 +255,24 @@
                     <textarea
                         class="jd-textarea"
                         id="jdInput"
-                        placeholder="请粘贴目标岗位的JD（岗位描述），例如：
+                        placeholder="粘贴目标岗位JD（岗位描述），例如：
 
-AI产品经理岗位：
-负责AI产品需求分析、用户研究、产品设计、项目管理等工作，推动AI产品从0到1落地..."
+【岗位职责】
+1. 负责AI产品的需求分析、产品规划...
+2. ...
+
+【任职要求】
+1. 本科及以上学历，计算机相关专业
+2. 具备产品需求分析、PRD撰写等能力..."
                         rows="8"
                     ></textarea>
                     <div class="jd-examples">
-                        <span class="example-label">快速填充示例：</span>
+                        <span class="example-label">💡 没有JD？快速填充示例：</span>
                         <button class="example-chip" onclick="fillExample('pm')">AI产品经理</button>
                         <button class="example-chip" onclick="fillExample('dev')">前端开发</button>
                         <button class="example-chip" onclick="fillExample('data')">数据分析</button>
                     </div>
-                    <p class="card-hint">用于提取岗位核心要求，分析你的岗位匹配程度</p>
+                    <p class="card-hint">AI 将提取岗位核心要求，逐维度评估你的匹配程度</p>
                 </div>
             </div>
 
@@ -253,7 +280,7 @@ AI产品经理岗位：
             <div class="action-bar">
                 <button class="btn-primary btn-large" id="analyzeBtn" onclick="startAnalysis()">
                     <span class="btn-icon">🔍</span>
-                    开始分析
+                    开始AI分析
                 </button>
             </div>
         </div>
@@ -262,27 +289,30 @@ AI产品经理岗位：
     <!-- ==================== Loading页面 ==================== -->
     <section id="loading" class="page">
         <div class="page-container loading-container">
-            <div class="loading-spinner">
-                <div class="spinner-ring"></div>
-                <div class="spinner-inner"></div>
-            </div>
-            <h2 class="loading-title">正在分析...</h2>
-            <div class="loading-steps">
-                <div class="loading-step" id="loadingStep1">
-                    <span class="step-dot"></span>
-                    <span class="step-text">正在解析简历内容</span>
+            <div class="loading-content">
+                <div class="loading-spinner">
+                    <div class="spinner-ring"></div>
+                    <div class="spinner-inner"></div>
                 </div>
-                <div class="loading-step" id="loadingStep2">
-                    <span class="step-dot"></span>
-                    <span class="step-text">正在解析岗位JD</span>
-                </div>
-                <div class="loading-step" id="loadingStep3">
-                    <span class="step-dot"></span>
-                    <span class="step-text">正在进行AI匹配分析</span>
-                </div>
-                <div class="loading-step" id="loadingStep4">
-                    <span class="step-dot"></span>
-                    <span class="step-text">正在生成优化建议</span>
+                <h2 class="loading-title" id="loadingStatusText">正在准备分析...</h2>
+                <p class="loading-timer" id="loadingTimer">已用时 0 秒</p>
+                <div class="loading-steps">
+                    <div class="loading-stage">
+                        <span class="stage-dot"></span>
+                        <span class="stage-text">解析简历内容</span>
+                    </div>
+                    <div class="loading-stage">
+                        <span class="stage-dot"></span>
+                        <span class="stage-text">提取岗位核心要求</span>
+                    </div>
+                    <div class="loading-stage">
+                        <span class="stage-dot"></span>
+                        <span class="stage-text">岗位匹配分析</span>
+                    </div>
+                    <div class="loading-stage">
+                        <span class="stage-dot"></span>
+                        <span class="stage-text">生成优化建议</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -301,25 +331,8 @@ AI产品经理岗位：
                 <div class="match-header">
                     <h3>一、岗位匹配分析</h3>
                 </div>
-                <div class="match-content-verbal">
-                    <div class="verbal-item overall">
-                        <span class="verbal-label">综合匹配程度</span>
-                        <span class="verbal-value high">较高</span>
-                    </div>
-                    <div class="verbal-items">
-                        <div class="verbal-item">
-                            <span class="verbal-label">能力匹配</span>
-                            <span class="verbal-value strong">较强</span>
-                        </div>
-                        <div class="verbal-item">
-                            <span class="verbal-label">经历匹配</span>
-                            <span class="verbal-value medium">中等</span>
-                        </div>
-                        <div class="verbal-item">
-                            <span class="verbal-label">岗位风险</span>
-                            <span class="verbal-value warn">需要优化</span>
-                        </div>
-                    </div>
+                <div class="match-content-verbal" id="matchContentVerbal">
+                    <p class="placeholder-text">加载中...</p>
                 </div>
             </div>
 
@@ -328,60 +341,8 @@ AI产品经理岗位：
                 <div class="match-header">
                     <h3>二、AI判断依据</h3>
                 </div>
-                <div class="card-body">
-                    <!-- 维度一 -->
-                    <div class="dimension-block">
-                        <h4 class="dimension-title">【维度一：AI产品设计能力】</h4>
-                        <div class="dimension-items">
-                            <div class="dimension-item match">
-                                <span class="dim-icon">✓</span>
-                                <span class="dim-label">匹配项：</span>
-                                <span class="dim-content">有AI Agent项目实践</span>
-                                <span class="dim-quote">（简历原文："有AI Agent项目实践经验"）</span>
-                                <span class="dim-badge medium">匹配度：中</span>
-                            </div>
-                            <div class="dimension-item gap">
-                                <span class="dim-icon">⚠</span>
-                                <span class="dim-label">待补充项：</span>
-                                <span class="dim-content">缺少低代码/AI中台产品经验</span>
-                                <span class="dim-badge low">匹配度：低</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 维度二 -->
-                    <div class="dimension-block">
-                        <h4 class="dimension-title">【维度二：需求分析与落地能力】</h4>
-                        <div class="dimension-items">
-                            <div class="dimension-item match">
-                                <span class="dim-icon">✓</span>
-                                <span class="dim-label">匹配项：</span>
-                                <span class="dim-content">参与需求调研与PRD编写</span>
-                                <span class="dim-quote">（简历原文："参与需求调研、PRD编写"）</span>
-                                <span class="dim-badge high">匹配度：高</span>
-                            </div>
-                            <div class="dimension-item gap">
-                                <span class="dim-icon">⚠</span>
-                                <span class="dim-label">待补充项：</span>
-                                <span class="dim-content">缺少业务结果量化数据</span>
-                                <span class="dim-badge medium">匹配度：中</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 维度三 -->
-                    <div class="dimension-block">
-                        <h4 class="dimension-title">【维度三：技术理解与协作能力】</h4>
-                        <div class="dimension-items">
-                            <div class="dimension-item match">
-                                <span class="dim-icon">✓</span>
-                                <span class="dim-label">匹配项：</span>
-                                <span class="dim-content">软件工程本科 + 担任项目组长协调5人团队</span>
-                                <span class="dim-quote">（简历原文："担任项目组长，协调5人团队"）</span>
-                                <span class="dim-badge high">匹配度：高</span>
-                            </div>
-                        </div>
-                    </div>
+                <div class="card-body" id="analysisBasisContent">
+                    <p class="placeholder-text">等待分析结果...</p>
                 </div>
             </div>
 
@@ -393,22 +354,8 @@ AI产品经理岗位：
                         <h3>✅ 简历优势</h3>
                     </div>
                     <div class="card-body">
-                        <ul class="result-list">
-                            <li class="result-item advantage">
-                                <span class="item-marker">▸</span>
-                                <span>软件工程专业背景，与AI产品岗位技术理解要求高度匹配</span>
-                                <span class="dim-tag">技术理解能力</span>
-                            </li>
-                            <li class="result-item advantage">
-                                <span class="item-marker">▸</span>
-                                <span>具备产品助理实习经验，熟悉产品需求分析与用户研究流程</span>
-                                <span class="dim-tag">需求分析能力</span>
-                            </li>
-                            <li class="result-item advantage">
-                                <span class="item-marker">▸</span>
-                                <span>有AI Agent项目实践，展示了AI产品的实际落地能力</span>
-                                <span class="dim-tag">AI产品设计能力</span>
-                            </li>
+                        <ul class="result-list" id="strengthsList">
+                            <li class="placeholder-text">等待分析结果...</li>
                         </ul>
                     </div>
                 </div>
@@ -419,108 +366,30 @@ AI产品经理岗位：
                         <h3>⚠️ 存在不足</h3>
                     </div>
                     <div class="card-body">
-                        <ul class="result-list">
-                            <li class="result-item weakness">
-                                <span class="item-marker">▸</span>
-                                <span>缺少企业级AI产品经验，项目规模与复杂度有待提升</span>
-                                <span class="dim-tag">AI产品设计能力</span>
-                            </li>
-                            <li class="result-item weakness">
-                                <span class="item-marker">▸</span>
-                                <span>项目商业化能力体现不足，缺少数据驱动的成果量化</span>
-                                <span class="dim-tag">结果量化能力</span>
-                            </li>
+                        <ul class="result-list" id="weaknessesList">
+                            <li class="placeholder-text">等待分析结果...</li>
                         </ul>
                     </div>
+                </div>
+            </div>
+
+            <!-- 修改前后对比 -->
+            <div class="result-card suggestion-card">
+                <div class="card-header result-header suggestion-header">
+                    <h3>三、修改前后对比</h3>
+                </div>
+                <div class="card-body" id="comparisonContent">
+                    <p class="placeholder-text">等待分析结果...</p>
                 </div>
             </div>
 
             <!-- AI优化建议 -->
             <div class="result-card suggestion-card">
                 <div class="card-header result-header suggestion-header">
-                    <h3>三、修改前后对比</h3>
-                </div>
-                <div class="card-body">
-                    <!-- 对比项1 -->
-                    <div class="compare-block">
-                        <div class="compare-grid">
-                            <div class="compare-col before">
-                                <div class="compare-label">修改前</div>
-                                <div class="compare-content">
-                                    <p>参与AI Agent项目开发</p>
-                                </div>
-                            </div>
-                            <div class="compare-arrow">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="5" y1="12" x2="19" y2="12"/>
-                                    <polyline points="12 5 19 12 12 19"/>
-                                </svg>
-                            </div>
-                            <div class="compare-col after">
-                                <div class="compare-label">修改后</div>
-                                <div class="compare-content">
-                                    <p>负责AI Agent需求分析、Prompt设计和流程优化</p>
-                                </div>
-                            </div>
-                        </div>
-                        <p class="compare-reason">改写依据：基于简历原文"参与AI Agent项目开发"，结合JD中"熟悉AI Agent产品设计"的要求，AI将模糊的"参与"细化为具体职责描述。</p>
-                    </div>
-
-                    <!-- 对比项2 -->
-                    <div class="compare-block">
-                        <div class="compare-grid">
-                            <div class="compare-col before">
-                                <div class="compare-label">修改前</div>
-                                <div class="compare-content">
-                                    <p>担任项目组长，协调5人团队</p>
-                                </div>
-                            </div>
-                            <div class="compare-arrow">
-                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <line x1="5" y1="12" x2="19" y2="12"/>
-                                    <polyline points="12 5 19 12 12 19"/>
-                                </svg>
-                            </div>
-                            <div class="compare-col after">
-                                <div class="compare-label">修改后</div>
-                                <div class="compare-content">
-                                    <p>作为项目组长，协调5人跨职能团队（含研发、设计）完成产品迭代，推动需求评审与技术方案落地</p>
-                                </div>
-                            </div>
-                        </div>
-                        <p class="compare-reason">改写依据：基于简历原文"担任项目组长，协调5人团队"，结合JD中"具备团队协作与跨部门沟通能力"的要求，AI补充了跨职能协作和具体工作场景。</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="result-card suggestion-card">
-                <div class="card-header result-header suggestion-header">
                     <h3>四、AI优化建议</h3>
                 </div>
-                <div class="card-body">
-                    <div class="ai-suggestions">
-                        <div class="suggestion-group">
-                            <h4 class="suggestion-group-title">建议突出哪些经历</h4>
-                            <ul class="suggestion-list">
-                                <li>产品助理实习期间的需求分析和PRD撰写经历</li>
-                                <li>AI Agent项目中参与的实际工作和贡献</li>
-                            </ul>
-                        </div>
-                        <div class="suggestion-group">
-                            <h4 class="suggestion-group-title">建议补充哪些信息</h4>
-                            <ul class="suggestion-list">
-                                <li>项目执行过程中取得的具体成果（如效率提升、用户反馈）</li>
-                                <li>在团队协作中具体的沟通和推动实例</li>
-                            </ul>
-                        </div>
-                        <div class="suggestion-group">
-                            <h4 class="suggestion-group-title">建议优化哪些表达</h4>
-                            <ul class="suggestion-list">
-                                <li>将"参与"改为"负责/主导"，明确个人角色</li>
-                                <li>增加具体方法论描述，如"使用XX框架进行用户研究"</li>
-                            </ul>
-                        </div>
-                    </div>
+                <div class="card-body" id="suggestionsContent">
+                    <p class="placeholder-text">等待分析结果...</p>
                 </div>
             </div>
 

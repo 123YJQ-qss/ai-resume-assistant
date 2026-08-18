@@ -220,43 +220,39 @@ async function startAnalysis() {
 
     // 跳转到Loading页面
     navigateTo('loading');
-    resetLoadingSteps();
+    const statusText = document.getElementById('loadingStatusText');
+    const timerText = document.getElementById('loadingTimer');
+    if (statusText) statusText.textContent = '正在准备分析...';
+    if (timerText) timerText.textContent = '已用时 0 秒';
+
+    let timerInterval = null;
 
     try {
-        // 步骤1：解析简历（立即完成）
-        setLoadingStep(1, 'active');
         const formData = new FormData();
         formData.append('file', uploadedFile);
         formData.append('job_description', jdInput.value);
-        
-        // 用微任务模拟步骤1完成（简历解析是本地操作，很快）
-        await new Promise(r => setTimeout(r, 300));
-        setLoadingStep(1, 'done');
-        setLoadingStep(2, 'active');
-        
-        // 步骤2：解析JD（立即完成）
-        await new Promise(r => setTimeout(r, 200));
-        setLoadingStep(2, 'done');
-        setLoadingStep(3, 'active');
-        
-        // 步骤3：AI深度分析（等待API返回，带计时器显示）
+
+        // 真实阶段文案（对应后端 Pipeline 的 4 个阶段），按实际耗时推进，不展示虚假百分比
         const startTime = Date.now();
-        const timerInterval = setInterval(() => {
+        const statusMessages = [
+            '正在解析简历内容...',
+            '正在提取岗位核心要求...',
+            '正在进行岗位匹配分析...',
+            '正在生成优化建议...'
+        ];
+
+        timerInterval = setInterval(() => {
             const elapsed = Math.floor((Date.now() - startTime) / 1000);
-            const step3 = document.getElementById('loadingStep3');
-            if (step3) {
-                const label = step3.querySelector('.step-text');
-                if (label) {
-                    label.textContent = `正在匹配与生成分析建议（已用时${elapsed}秒）`;
-                }
-            }
-        }, 1000);
+            const msgIdx = Math.min(Math.floor(elapsed / 3), statusMessages.length - 1);
+            if (statusText) statusText.textContent = statusMessages[msgIdx];
+            if (timerText) timerText.textContent = `已用时 ${elapsed} 秒`;
+        }, 500);
 
         const response = await fetch(`${API_BASE}/api/analyze`, {
             method: 'POST',
             body: formData
         });
-        
+
         clearInterval(timerInterval);
 
         if (!response.ok) {
@@ -265,15 +261,7 @@ async function startAnalysis() {
         }
 
         const result = await response.json();
-        
-        // 步骤3完成，进入步骤4
-        setLoadingStep(3, 'done');
-        setLoadingStep(4, 'active');
-        
-        // 步骤4：渲染结果
-        await new Promise(r => setTimeout(r, 300));
-        setLoadingStep(4, 'done');
-        
+
         if (result.success && result.data) {
             const validatedData = validateAndNormalizeData(result.data);
             renderAnalysisResult(validatedData, result.data_source, result.warning);
@@ -287,8 +275,8 @@ async function startAnalysis() {
 
     } catch (error) {
         console.error('分析失败:', error);
-        clearInterval(window._loadingTimer);
-        
+        if (timerInterval) clearInterval(timerInterval);
+
         analyzeBtn.disabled = false;
         analyzeBtn.innerHTML = '<span class="btn-icon">🔍</span> 开始分析';
         showLoadingError(error.message);
@@ -419,27 +407,22 @@ function renderAnalysisResult(data, dataSource, warning) {
 
 /**
  * 清空结果页面所有容器
+ * 使用与 index.html 中一致的 ID 选择器
  */
 function clearResultPage() {
-    const containers = [
-        '.match-content-verbal',
-        '#analysisBasisContent',
-        '#strengthsList',
-        '#weaknessesList',
-        '#comparisonContent',
-        '#suggestionsContent'
+    const containerIds = [
+        'matchContentVerbal',
+        'analysisBasisContent',
+        'strengthsList',
+        'weaknessesList',
+        'comparisonContent',
+        'suggestionsContent'
     ];
     
-    containers.forEach(selector => {
-        const el = document.querySelector(selector);
+    containerIds.forEach(id => {
+        const el = document.getElementById(id);
         if (el) el.innerHTML = '';
     });
-    
-    // 清除通用容器（兜底）
-    const basisBody = document.querySelectorAll('.result-card')[1]?.querySelector('.card-body');
-    if (basisBody && basisBody.id !== 'analysisBasisContent') {
-        // 已经通过ID处理，跳过
-    }
 }
 
 /**
@@ -452,12 +435,10 @@ function showDataSourceBadge(dataSource, warning) {
     const badge = document.createElement('div');
     badge.className = 'data-source-badge';
     
-    if (dataSource === 'coze_api') {
+    if (dataSource === 'llm') {
         badge.innerHTML = '<span class="badge-real">● AI实时分析结果</span>';
-    } else if (dataSource === 'coze_api_partial') {
+    } else if (dataSource === 'llm_partial') {
         badge.innerHTML = '<span class="badge-partial">⚠ 部分分析结果</span><span class="badge-msg">' + (warning || '') + '</span>';
-    } else if (dataSource === 'coze_api_idle') {
-        badge.innerHTML = '<span class="badge-real">● AI分析结果</span>';
     } else if (dataSource === 'invalid_input') {
         badge.innerHTML = '<span class="badge-mock">⚠ 输入无效</span><span class="badge-msg">' + (warning || '请检查输入内容') + '</span>';
     } else if (dataSource === 'mock_fallback') {
@@ -473,29 +454,47 @@ function showDataSourceBadge(dataSource, warning) {
 }
 
 /**
- * 渲染岗位匹配程度
+ * 获取匹配等级的样式类
+ */
+function getLevelClass(value) {
+    return value === '高' ? 'high' : value === '低' ? 'low' : 'medium';
+}
+
+/**
+ * 渲染岗位匹配程度（卡片形式）
  */
 function renderMatchLevel(matchLevel) {
-    const container = document.querySelector('.match-content-verbal');
+    const container = document.getElementById('matchContentVerbal');
     if (!container || !matchLevel) return;
 
+    const overall = matchLevel.overall || '待评估';
+    const ability = matchLevel.ability || '待评估';
+    const experience = matchLevel.experience || '待评估';
+    const risk = matchLevel.risk || '待评估';
+
     container.innerHTML = `
-        <div class="verbal-item overall">
-            <span class="verbal-label">综合匹配程度</span>
-            <span class="verbal-value high">${matchLevel.overall || '待评估'}</span>
-        </div>
-        <div class="verbal-items">
-            <div class="verbal-item">
-                <span class="verbal-label">能力匹配</span>
-                <span class="verbal-value strong">${matchLevel.ability || '待评估'}</span>
+        <div class="match-overview">
+            <div class="match-overall-card">
+                <span class="match-overall-value ${getLevelClass(overall)}">${overall}</span>
+                <span class="match-overall-label">综合匹配</span>
+                <span class="match-overall-desc">岗位整体契合度评估</span>
             </div>
-            <div class="verbal-item">
-                <span class="verbal-label">经历匹配</span>
-                <span class="verbal-value medium">${matchLevel.experience || '待评估'}</span>
-            </div>
-            <div class="verbal-item">
-                <span class="verbal-label">岗位风险</span>
-                <span class="verbal-value warn">${matchLevel.risk || '待评估'}</span>
+            <div class="match-sub-grid">
+                <div class="match-sub-card">
+                    <span class="match-sub-icon">⚡</span>
+                    <span class="match-sub-label">技能匹配</span>
+                    <span class="match-sub-value ${getLevelClass(ability)}">${ability}</span>
+                </div>
+                <div class="match-sub-card">
+                    <span class="match-sub-icon">💼</span>
+                    <span class="match-sub-label">经历匹配</span>
+                    <span class="match-sub-value ${getLevelClass(experience)}">${experience}</span>
+                </div>
+                <div class="match-sub-card">
+                    <span class="match-sub-icon">⚠️</span>
+                    <span class="match-sub-label">风险提示</span>
+                    <span class="match-sub-value ${getLevelClass(risk)}">${risk}</span>
+                </div>
             </div>
         </div>
     `;
@@ -505,45 +504,55 @@ function renderMatchLevel(matchLevel) {
  * 渲染AI判断依据（按维度分组）
  */
 function renderAnalysisBasis(analysisBasis) {
-    const container = document.querySelector('.ai-reason') || 
-                      document.querySelector('.result-card .card-body');
-    if (!container || !analysisBasis || analysisBasis.length === 0) return;
-
-    // 找到AI判断依据的card-body
-    const basisCard = document.querySelectorAll('.result-card')[1];
-    const basisBody = basisCard ? basisCard.querySelector('.card-body') : null;
+    const basisBody = document.getElementById('analysisBasisContent');
     if (!basisBody) return;
 
-    basisBody.innerHTML = analysisBasis.map(dimension => `
+    if (!analysisBasis || analysisBasis.length === 0) {
+        basisBody.innerHTML = '<p class="placeholder-text">暂无分析依据</p>';
+        return;
+    }
+
+    basisBody.innerHTML = analysisBasis.map(dimension => {
+        const items = dimension.items || [];
+        return `
         <div class="dimension-block">
-            <h4 class="dimension-title">【维度：${dimension.dimension}】</h4>
+            <h4 class="dimension-title">【维度：${dimension.dimension || '未命名维度'}】</h4>
             <div class="dimension-items">
-                ${dimension.items.map(item => `
+                ${items.map(item => {
+                    // 可信度展示：match 项有引用文本 → 已核验；被清除 → 未通过核验；gap 项不展示
+                    let trustHtml = '';
+                    if (item.type === 'match') {
+                        trustHtml = item.quote
+                            ? '<span class="trust-tag verified">✓ 原文已核验</span>'
+                            : '<span class="trust-tag unverified">引用未通过核验</span>';
+                    }
+                    const degreeClass = item.match_degree === '高' ? 'high' : item.match_degree === '中' ? 'medium' : 'low';
+                    return `
                     <div class="dimension-item ${item.type === 'match' ? 'match' : 'gap'}">
-                        <span class="dim-icon">${item.type === 'match' ? '✓' : '⚠'}</span>
-                        <span class="dim-label">${item.type === 'match' ? '匹配项：' : '待补充项：'}</span>
-                        <span class="dim-content">${item.content}</span>
+                        <div class="dimension-item-main">
+                            <span class="dim-icon">${item.type === 'match' ? '✓' : '⚠'}</span>
+                            <span class="dim-label">${item.type === 'match' ? '匹配项' : '待补充项'}</span>
+                            <span class="dim-content">${item.content || ''}</span>
+                        </div>
                         ${item.quote ? `<span class="dim-quote">（简历原文："${item.quote}"）</span>` : ''}
-                        <span class="dim-badge ${item.match_degree === '高' ? 'high' : item.match_degree === '中' ? 'medium' : 'low'}">
-                            匹配度：${item.match_degree || '待评估'}
-                        </span>
+                        <div class="dimension-item-meta">
+                            ${trustHtml}
+                            <span class="dim-badge ${degreeClass}">匹配度：${item.match_degree || '待评估'}</span>
+                        </div>
                     </div>
-                `).join('')}
+                `;
+                }).join('')}
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 /**
  * 渲染简历优势
  */
 function renderStrengths(strengths) {
-    const cards = document.querySelectorAll('.result-card');
-    const advantageCard = cards[2];
-    if (!advantageCard) return;
-
-    const list = advantageCard.querySelector('.result-list') || 
-                 document.getElementById('strengthsList');
+    const list = document.getElementById('strengthsList');
     if (!list) return;
 
     if (!strengths || strengths.length === 0) {
@@ -564,12 +573,7 @@ function renderStrengths(strengths) {
  * 渲染存在不足
  */
 function renderWeaknesses(weaknesses) {
-    const cards = document.querySelectorAll('.result-card');
-    const weaknessCard = cards[3];
-    if (!weaknessCard) return;
-
-    const list = weaknessCard.querySelector('.result-list') ||
-                 document.getElementById('weaknessesList');
+    const list = document.getElementById('weaknessesList');
     if (!list) return;
 
     if (!weaknesses || weaknesses.length === 0) {
@@ -590,14 +594,9 @@ function renderWeaknesses(weaknesses) {
  * 渲染修改前后对比（使用后端返回的 rewrite_suggestions）
  */
 function renderComparison(data) {
-    const cards = document.querySelectorAll('.result-card');
-    const compareCard = cards[4];
-    if (!compareCard) return;
-
-    const body = compareCard.querySelector('.card-body');
+    const body = document.getElementById('comparisonContent');
     if (!body) return;
 
-    // 使用后端返回的 rewrite_suggestions
     const rewriteSuggestions = data.rewrite_suggestions || [];
 
     if (rewriteSuggestions.length === 0) {
@@ -636,14 +635,9 @@ function renderComparison(data) {
  * 渲染AI优化建议（使用后端返回的 optimization_advice）
  */
 function renderSuggestions(data) {
-    const cards = document.querySelectorAll('.result-card');
-    const suggestionCard = cards[5];
-    if (!suggestionCard) return;
-
-    const body = suggestionCard.querySelector('.card-body');
+    const body = document.getElementById('suggestionsContent');
     if (!body) return;
 
-    // 使用后端返回的 optimization_advice
     const advice = data.optimization_advice || {};
 
     body.innerHTML = `

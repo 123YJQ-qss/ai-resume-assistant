@@ -13,9 +13,9 @@ services:
         value: "18"
       - key: PORT
         value: "10000"
-      - key: COZE_API_KEY
-        sync: false  # 在 Render 控制台配置
-      - key: COZE_BOT_ID
-        sync: false
-      - key: COZEZE_API_URL
-        value: https://api.coze.cn
+      - key: LLM_API_KEY
+        sync: false  # 在 Render 控制台配置 DeepSeek API Key
+      - key: LLM_BASE_URL
+        value: https://api.deepseek.com
+      - key: LLM_MODEL
+        value: deepseek-chat

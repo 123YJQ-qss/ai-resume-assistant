@@ -214,7 +214,30 @@ body {
     color: var(--text-secondary);
     font-size: 1.1rem;
     line-height: 1.7;
-    margin-bottom: 36px;
+    margin-bottom: 28px;
+}
+
+.hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 32px;
+}
+
+.hero-tag {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 6px 16px;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    transition: var(--transition);
+}
+
+.hero-tag:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
 }
 
 /* -------------------- 按钮 -------------------- */
@@ -429,6 +452,62 @@ body {
 }
 
 /* -------------------- 输入页面 -------------------- */
+/* 步骤引导条 */
+.step-guide {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+    padding: 0 8px;
+}
+
+.guide-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.guide-num {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.guide-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    transition: var(--transition);
+    white-space: nowrap;
+}
+
+.guide-step.active .guide-num {
+    background: var(--gradient);
+    color: #fff;
+    border-color: transparent;
+}
+
+.guide-step.active .guide-label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.guide-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
 .input-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -674,8 +753,14 @@ body {
 .loading-title {
     font-size: 1.2rem;
     font-weight: 600;
-    margin-bottom: 28px;
+    margin-bottom: 8px;
     color: var(--text-secondary);
+}
+
+.loading-timer {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 32px;
 }
 
 .loading-steps {
@@ -684,39 +769,24 @@ body {
     gap: 14px;
 }
 
-.loading-step {
+.loading-stage {
     display: flex;
     align-items: center;
     gap: 12px;
     color: var(--text-muted);
     font-size: 0.9rem;
-    transition: var(--transition);
 }
 
-.loading-step.active {
-    color: var(--text-primary);
-}
-
-.loading-step.done {
-    color: var(--success);
-}
-
-.step-dot {
+.stage-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: var(--text-muted);
-    transition: var(--transition);
+    flex-shrink: 0;
 }
 
-.loading-step.active .step-dot {
-    background: var(--accent-light);
-    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
-    animation: pulse 1s ease-in-out infinite;
-}
-
-.loading-step.done .step-dot {
-    background: var(--success);
+.stage-text {
+    color: inherit;
 }
 
 /* Loading 错误提示 */
@@ -936,6 +1006,83 @@ body {
 .verbal-value.medium { color: var(--warning); }
 .verbal-value.warn { color: var(--danger); }
 
+/* 匹配度卡片 */
+.match-overview {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.match-overall-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+    padding: 28px 24px;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+    border: 1px solid rgba(99, 102, 241, 0.2);
+    border-radius: var(--radius-lg);
+}
+
+.match-overall-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+
+.match-overall-value.high { color: var(--success); }
+.match-overall-value.medium { color: var(--warning); }
+.match-overall-value.low { color: var(--danger); }
+
+.match-overall-label {
+    font-size: 1.05rem;
+    font-weight: 600;
+}
+
+.match-overall-desc {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.match-sub-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.match-sub-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+    padding: 20px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.match-sub-icon {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+}
+
+.match-sub-label {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.match-sub-value {
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.match-sub-value.high { color: var(--success); }
+.match-sub-value.medium { color: var(--warning); }
+.match-sub-value.low { color: var(--danger); }
+
 /* AI判断依据 - 维度分组 */
 .dimension-block {
     margin-bottom: 24px;
@@ -961,13 +1108,20 @@ body {
 
 .dimension-item {
     display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 6px;
-    padding: 10px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px;
     border-radius: var(--radius);
     font-size: 0.875rem;
     line-height: 1.6;
+}
+
+.dimension-item-main {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 .dimension-item.match {
@@ -1026,6 +1180,35 @@ body {
 
 .dim-badge.low {
     background: rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+}
+
+/* 引用可信度标签 + 匹配度元信息 */
+.dimension-item-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.trust-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 100px;
+    flex-shrink: 0;
+}
+
+.trust-tag.verified {
+    background: var(--success-bg);
+    color: var(--success);
+}
+
+.trust-tag.unverified {
+    background: var(--danger-bg);
     color: var(--danger);
 }
 
@@ -1273,6 +1456,14 @@ body {
 
     .verbal-items {
         grid-template-columns: 1fr;
+    }
+
+    .match-sub-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .match-overall-value {
+        font-size: 2rem;
     }
 
     .dimension-item {
