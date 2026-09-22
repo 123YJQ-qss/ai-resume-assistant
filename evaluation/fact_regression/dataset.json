@@ -1,0 +1,161 @@
+{
+  "version": "v2",
+  "resume": "杨佳奇\n15332419272 | 172467069@qq.com\n21 岁 男 应届生\n教育背景\n西安邮电大学 软件工程 (本科) 2022.09 - 2026.06\n\n专业技能\n掌握 LLM应用开发流程，具备大模型API调用、Prompt Engineering、Agent Workflow设计以及AI应用后端集成经验。\n掌握 Agent Workflow设计方法，具备任务拆解、流程编排、结构化输出设计以及多阶段AI任务处理经验。\n掌握 RAG检索增强技术，熟悉文本解析、Embedding向量化、FAISS向量检索、知识库构建以及上下文增强流程。\n熟悉 Python Web开发技术栈，掌握FastAPI/Django框架，具备接口设计、服务封装以及AI应用后端开发经验。\n熟悉 数据库开发技术，掌握SQLAlchemy ORM以及MySQL数据库设计与交互。\n熟悉 Linux环境及服务部署流程，了解SSH/SFTP远程管理、服务器配置以及应用部署。\n\n荣誉证书\n蓝桥杯省赛二等奖、计算机设计大赛二等奖\n\n实习经历\n亚信科技 开发工程师 2025.10 - 2026.03\n在亚信科技实习期间，参与企业级 CRM运维平台 建设，负责自动化运维模块后端开发，面向 300+内部运维人员 提供 SQL 发布、服务器配置管理等业务能力。\n技术：Python、FastAPI、SQLAlchemy、MySQL、openpyxl、Paramiko、Vue2、Linux\n个人职责：负责平台后端接口开发、业务逻辑实现以及数据处理，参与模块需求分析、接口联调和功能上线。\n核心模块：\n1. SQL自动化发布模块\n针对生产环境 SQL 发布依赖人工执行、批量处理效率低以及执行过程缺少记录的问题，参与自动化发布模块建设。\n基于 openpyxl开发Excel SQL解析能力，实现 SQL 内容读取、格式校验以及发布任务自动生成，支持 500+ SQL任务批量处理。\n设计 任务状态流转机制，记录任务创建、执行、成功、失败等生命周期状态，提高发布过程可追踪性。\n开发任务查询接口，实现执行记录查看以及历史任务管理。\n2. Nginx配置管理模块\n针对服务器配置修改依赖人工操作、变更过程不可追踪以及异常恢复困难的问题，参与配置管理模块开发。\n基于 Paramiko实现SSH远程连接与SFTP文件管理，支持服务器配置文件上传、修改以及备份。\n设计 配置变更记录机制，保存历史操作信息，支持异常情况下配置恢复。\n优化服务器配置管理流程，降低人工维护成本，提高运维效率。\n3. 后端接口开发\n基于 FastAPI开发后台业务接口，实现任务管理、数据查询等核心功能。\n使用 SQLAlchemy完成数据库交互，参与业务数据模型设计以及接口联调。\n配合前端完成接口测试、功能验证以及问题定位。\n\n项目经历\n职途AI AI应用开发 2026.04 - 至今\n项目简介：基于 LLM 的智能求职辅助应用，面向应届生求职场景，解决岗位要求理解困难、简历与目标岗位匹配分析效率低以及优化建议缺少针对性等问题，实现简历解析、岗位分析、能力匹配评估以及优化建议生成。\n技术栈:Python、FastAPI、LLM API、Agent Workflow、Prompt Engineering、RAG、Embedding、FAISS、sentence-transformers\n核心工作：\n基于 FastAPI 和 LLM 构建智能简历分析系统，将传统单 Prompt 调用重构为多 Agent Workflow，设计 JD 分析、简历解析、匹配评估、优化建议四类 Agent，通过结构化 JSON Schema 实现任务拆解、上下文传递和流程编排。\n构建 RAG 检索增强模块，使用 sentence-transformers 生成文本 Embedding，结合 FAISS 向量索引实现岗位知识 Top-K 语义召回，并将检索结果注入匹配评估 Agent 上下文，提高分析可解释性。\n设计 LLM Provider 抽象服务层，解耦 Agent 与底层模型调用，支持 DeepSeek/OpenAI Compatible/Coze 多模型切换，统一封装请求调用、超时控制、异常重试、JSON 解析和 Token 使用统计。\n针对大模型调用不稳定问题，实现 Workflow 自动降级机制，当 Agent 流程失败时回退单 Prompt 分析，并针对 LLM 异常、服务不可用场景返回结构化结果，保持 API 接口契约和前端展示稳定。",
+  "cases": [
+    {
+      "id": "jd_01",
+      "title": "大模型 API 测试开发工程师",
+      "jd": "职位描述\n岗位职责：\n1. 负责大模型相关的接口的测试，调用以及功能开发集成\n2. 负责 LLM 相关的客户支持与问题解决\n3. 负责大模型、图像以及视频自部署相关的功能测试以及工程、算法性能相关的测试工作\n\n任职要求：\n1. 计算机科学、信息工程、电子工程等专业本科及以上学历；\n2. 具备一定的编程能力，熟练使用 Python 进行开发；\n3. 了解网络网关基本概念，能进行基础网络问题排查；\n4. 熟悉 openAI 等大模型接口相关的知识；\n5. 加分项：熟悉 sglang、vLLM 等大模型推理框架的接口实现；熟悉容器技术，了解云平台技术者优先；熟悉 SQL 相关的操作，有云平台 SQL 中间件的使用经验者优先。",
+      "mock_type": "real"
+    },
+    {
+      "id": "jd_02",
+      "title": "AI 模型运维工程师",
+      "jd": "职位描述\n岗位职责：\n1. 大模型服务运维保障：负责公司核心大模型服务的日常运维、监控告警与故障响应，确保模型推理服务的高可用性与稳定性；\n2. AI 工具链与 Agent 方案评估：持续关注市场主流 AI 模型（如 GPT、Claude、Grok、deepseek 等）及各类 Coding Agent、办公 Agent 的能力演进，为公司 AI 工具选型与方案提供建议；\n3. 稳定性与成本优化：深入分析模型服务的性能瓶颈与 Token 消耗，在保障服务质量的前提下持续降低推理成本。\n\n任职要求：\n1. 全日制本科及以上学历，计算机、软件工程或相关专业；具备 1-3 年运维、SRE 或后端开发相关工作经验；\n2. 工作踏实、认真、目标导向，具备强烈的责任心与 ownership 意识；能够在快节奏环境中主动推进问题解决；\n3. 对 AI 模型领域有浓厚兴趣，愿意主动投入时间研究各厂商的大模型能力及 Agent 产品；能够独立分析形成清晰的技术判断；\n4. 加分项：具备 AI Coding 实践经验，有使用 AI 辅助开发工具完成实际项目的经历。",
+      "mock_type": "real"
+    },
+    {
+      "id": "jd_03",
+      "title": "AI 效能解决方案工程师",
+      "jd": "职位描述\n岗位定位：我们正在用 AI 驱动组织内部业务变革，从 0 到 1 打造服务内部的 AI 产品。本岗位技术能力为核心，你既是业务的翻译官，也是 AI 落地的第一执行人，拥有场景定义、方案架构、原型落地、反馈驱动产品路线的实际话语权。\n\n岗位职责：\n1. 深入业务线，挖掘真实业务痛点，识别 AI 可以带来显著提效的机会，独立完成需求拆解、技术可行性评估，定义 AI 产品的初始形态；\n2. 承担核心技术落地工作：完成整体系统架构设计、技术选型、原型与 MVP 搭建，推动 AI 方案落地为可实际运行的内部产品，完成上线验证；\n3. 打通业务与技术：把复杂业务流程转化为 LLM/RAG/Agent 等 AI 可实现的方案；同时向业务侧输出 AI 能力边界，管理业务预期；\n4. 主导项目完整闭环：从场景调研、方案设计、技术验证、上线、业务 adoption 验证，推动业务真正使用 AI 能力，实现业务流程降本提效；\n5. 基于真实落地数据与业务反馈，输出评估与改进建议，直接参与产品迭代与路线规划。\n\n任职要求：\n1. 有大模型/AI 项目 0-1 落地经验，能够独立完成方案设计与工程落地；\n2. 熟悉 RAG、Agent、向量库、大模型推理等 LLM 应用技术栈；\n3. 业务敏感度高，能快速理解业务，完成业务需求和技术方案双向转化；\n4. 擅长跨团队协同推进项目，能处理模糊需求，独立推动项目闭环。",
+      "mock_type": "real"
+    },
+    {
+      "id": "jd_04",
+      "title": "AI Builder 研发（应届）",
+      "jd": "职位描述\n岗位职责：\n1. 业务/客户直接对接：直接面向业务方及客户，独立完成需求调研、沟通对接、痛点分析，深入理解营销场景下的真实业务需求；\n2. 全链路产品推进：从需求分析、产品方案设计、开发实现到上线交付，以 AI Native 的方式独立驱动项目全流程推进，确保高效落地；\n3. AI 驱动的产品构建：基于业务场景，利用 AI 工具和技术，完成从 0 到 1 的产品开发，将业务需求快速转化为可用的产品与工具；\n4. AI 工具链整合：熟练运用主流 AI 开发工具（如 Claude、Cursor、Copilot 等），高效完成编码、测试及部署，持续提升研发效率；\n5. 技术方案设计：针对业务需求，设计并落地 AI 相关的技术解决方案，包括但不限于大模型应用、智能体（Agent）搭建、工作流自动化等；\n6. 前沿技术探索：持续关注并学习 AI 领域最新技术趋势，主动将新技术、新工具引入业务实践，推动团队技术能力升级。\n\n任职要求：\n1. 本科及以上学历，计算机科学、人工智能、软件工程等相关专业优先；\n2. 1 年以上 AI 相关开发经验，有 AI Native 产品或项目的从 0 到 1 开发经历者优先；\n3. 具备直接面向业务方/客户的沟通能力，能够独立完成需求调研与方案沟通；\n4. 熟练使用主流 AI 编程辅助工具及大模型 API，能够借助 AI 工具大幅提升开发效率和交付质量；\n5. 具备扎实的编程功底，熟悉至少一门主流编程语言（如 Python、JavaScript/TypeScript、Go 等），了解常见的系统架构设计；\n6. 熟悉大语言模型（LLM）的应用开发，有 Prompt Engineering、RAG、Agent、Fine-tuning 等相关实践经验者优先；\n7. 对 AI 技术充满热情，具备强烈的自驱力和好奇心，能够快速学习并掌握新技术、新工具；\n8. 具备独立承担项目的能力，能从 0 到 1 推动项目落地。\n\n加分项：\n1. 有直接对接客户/业务方并推动产品落地的实际经验；\n2. 熟悉多模态 AI 技术（文本、图像、视频、语音等）的应用开发；\n3. 具备全栈开发能力，能独立完成前后端开发及部署。",
+      "mock_type": "real"
+    },
+    {
+      "id": "jd_05",
+      "title": "AI 后端开发工程师（应届·多模态方向）",
+      "jd": "职位描述\n核心要求：\n- AI 产品与视频生成经验：参与过 AI 产品从 0 到 1 落地流程，熟悉产品生命周期；拥有视频生成、多模态相关项目、课程设计或实习实践经验，了解文生视频、图生视频的基本流程；\n- Agent 与多模态能力：熟悉 AI Agent 体系、技能设计及工具调用逻辑，了解智能体任务规划、协作与执行流程，可参与 Agent 能力的开发与调试工作；\n- 顶尖多模态模型熟悉度：熟悉海内外主流视频多模态大模型，重点掌握 Google Gemini (Veo)、OpenAI Sora 等旗舰模型；了解 Veo 的技术特性，掌握 Gemini API 及 Flow 平台的接入使用方法；熟悉 Sora 核心能力、API 调用及提示词工程相关技巧；可对比分析 Veo、Sora 与 Runway、Pika 等模型在能力边界、生成效果、时长、成本及适用场景的差异；\n- 技术敏感度：持续关注大模型、多模态及视频生成领域前沿动态，能及时跟进模型发布、API 更新、价格调整等信息并同步团队；\n- 算法与工程基础：了解 RAG、LoRA 等基础微调技术；对 Stable Diffusion、Whisper、LLaVA 等常用开源多模态模型有学习或实践经验；熟练掌握 Python，具备基础的 API 调用、数据处理与代码调试能力。\n\n教育背景：25/26 届应届毕业生，计算机、人工智能、软件工程、电子信息等相关专业本科及以上学历。\n\n加分项：\n- 拥有 AI Agent、视频生成、多模态应用相关实习、竞赛或独立项目经验；\n- 基于 Gemini API (Veo)、Sora API 开发过简易 Demo 或完成过技术验证；\n- 有 GitHub 开源项目、技术博客、学习笔记等可展示的实践成果；\n- 活跃于 Hugging Face、arXiv 等技术平台，习惯关注并分享前沿论文与模型动态。",
+      "mock_type": "real"
+    },
+    {
+      "id": "mock_clean_01",
+      "title": "Mock Clean - 无违规基线",
+      "jd": "测试 JD：本岗位使用 FastAPI 和 SQLAlchemy",
+      "mock_type": "clean",
+      "_mock_scenario": {
+        "description": "original 为简历真实片段，revised 只做等价改写，预期 0 违规",
+        "rewrite_suggestions": [
+          {
+            "original": "基于 FastAPI开发后台业务接口，实现任务管理、数据查询等核心功能",
+            "revised": "基于 FastAPI 开发后台业务接口，实现任务管理与数据查询核心功能",
+            "basis": "技术栈与 JD 要求对齐",
+            "evidence_grade": "A"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mock_adv_invention",
+      "title": "Mock Adv - original 不可追溯",
+      "jd": "测试 JD",
+      "mock_type": "adversarial",
+      "expected_violations": [
+        "fact_invention"
+      ],
+      "_mock_scenario": {
+        "description": "original 为伪造片段，不在简历原文中",
+        "rewrite_suggestions": [
+          {
+            "original": "独立负责过大型电商高并发系统架构设计",
+            "revised": "独立负责过大型电商高并发系统架构设计",
+            "basis": "匹配岗位要求",
+            "evidence_grade": "A"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mock_adv_metric",
+      "title": "Mock Adv - 新增量化指标",
+      "jd": "测试 JD",
+      "mock_type": "adversarial",
+      "expected_violations": [
+        "fake_metric"
+      ],
+      "_mock_scenario": {
+        "description": "revised 新增 original 没有的数字和量化表述",
+        "rewrite_suggestions": [
+          {
+            "original": "基于 openpyxl开发Excel SQL解析能力，实现 SQL 内容读取、格式校验以及发布任务自动生成",
+            "revised": "基于 openpyxl 开发 SQL 解析，效率提升 60%，支持 SQL 内容读取、格式校验以及发布任务自动生成",
+            "basis": "突出性能提升",
+            "evidence_grade": "B"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mock_adv_upgrade",
+      "title": "Mock Adv - 措辞升级",
+      "jd": "测试 JD",
+      "mock_type": "adversarial",
+      "expected_violations": [
+        "skill_upgrade"
+      ],
+      "_mock_scenario": {
+        "description": "revised 把参与改成主导、掌握改成精通",
+        "rewrite_suggestions": [
+          {
+            "original": "负责平台后端接口开发、业务逻辑实现以及数据处理，参与模块需求分析",
+            "revised": "精通平台后端接口开发，主导模块需求分析与业务逻辑实现",
+            "basis": "强化能力体现",
+            "evidence_grade": "B"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mock_adv_pl",
+      "title": "Mock Adv - 项目级包装",
+      "jd": "测试 JD",
+      "mock_type": "adversarial",
+      "expected_violations": [
+        "project_level_upgrade"
+      ],
+      "_mock_scenario": {
+        "description": "把个人项目包装成生产级/高可用",
+        "rewrite_suggestions": [
+          {
+            "original": "构建 RAG 检索增强模块，使用 sentence-transformers 生成文本 Embedding，结合 FAISS 向量索引实现岗位知识 Top-K 语义召回",
+            "revised": "构建高可用生产级 RAG 检索增强模块，实现毫秒级响应",
+            "basis": "突出项目价值",
+            "evidence_grade": "B"
+          }
+        ]
+      }
+    },
+    {
+      "id": "mock_adv_theoretical",
+      "title": "Mock Adv - 推断越级",
+      "jd": "测试 JD",
+      "mock_type": "adversarial",
+      "expected_violations": [
+        "theoretical_to_practical"
+      ],
+      "_mock_scenario": {
+        "description": "evidence_grade 为 C（能力推断），不应出现在 rewrite_suggestions",
+        "rewrite_suggestions": [
+          {
+            "original": "基于 FastAPI开发后台业务接口，实现任务管理、数据查询等核心功能",
+            "revised": "具备 Kubernetes 容器编排经验",
+            "basis": "推断可迁移能力",
+            "evidence_grade": "C"
+          }
+        ]
+      }
+    }
+  ],
+  "checks_legend": {
+    "fact_invention": "虚构不存在的事实（如编造经历）",
+    "fake_metric": "虚构数字/效果（如提升60%、毫秒级）",
+    "skill_upgrade": "能力程度无依据升级（如参与→主导、掌握→精通）",
+    "project_level_upgrade": "个人项目被包装成生产级/工业级/高可用",
+    "theoretical_to_practical": "理论推断被写成实际经验",
+    "concept_misuse": "技术概念混淆（如JSON Schema≠Tool Calling、RAG≠准确率提升）"
+  }
+}

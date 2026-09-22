@@ -1,0 +1,12 @@
+# AI简历优化助手 - Python FastAPI 后端依赖
+# 说明：httpx 用于 LLM 请求（OpenAI 兼容接口与 Coze 流式），为迁移后新增的必要依赖
+fastapi
+uvicorn
+httpx
+langchain-core
+sentence-transformers
+faiss-cpu
+numpy
+python-multipart
+pypdf
+python-docx

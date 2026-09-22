@@ -1,0 +1,953 @@
+{
+  "documents": [
+    {
+      "id": "ai_llm_api",
+      "category": "AI应用开发",
+      "content": "掌握大模型API调用：理解请求参数（temperature、max_tokens、stream）、鉴权方式、错误码处理，能够封装统一的LLM客户端并适配不同模型供应商。",
+      "keywords": [
+        "LLM API",
+        "大模型调用",
+        "temperature",
+        "stream",
+        "鉴权",
+        "模型供应商"
+      ]
+    },
+    {
+      "id": "ai_llm_stream",
+      "category": "AI应用开发",
+      "content": "掌握LLM流式响应处理：解析SSE（Server-Sent Events）数据流、按行解析data事件、实时拼接answer内容，实现打字机式输出体验。",
+      "keywords": [
+        "流式响应",
+        "SSE",
+        "data事件",
+        "answer",
+        "实时输出",
+        "打字机"
+      ]
+    },
+    {
+      "id": "ai_llm_retry",
+      "category": "AI应用开发",
+      "content": "掌握LLM调用的健壮性设计：超时控制、指数退避重试、熔断降级，当模型不可用时返回兜底数据并保证主流程可用。",
+      "keywords": [
+        "超时",
+        "重试",
+        "指数退避",
+        "熔断",
+        "降级",
+        "兜底数据"
+      ]
+    },
+    {
+      "id": "ai_prompt_basic",
+      "category": "AI应用开发",
+      "content": "掌握Prompt Engineering基础：角色设定、任务描述、上下文组织、输出约束，能编写清晰可复用的提示词模板。",
+      "keywords": [
+        "Prompt Engineering",
+        "提示词",
+        "角色设定",
+        "上下文",
+        "输出约束",
+        "模板"
+      ]
+    },
+    {
+      "id": "ai_prompt_json",
+      "category": "AI应用开发",
+      "content": "掌握结构化输出约束：在Prompt中明确JSON Schema、字段说明与示例，并用代码块包裹，保证模型返回可解析的结构化数据。",
+      "keywords": [
+        "结构化输出",
+        "JSON Schema",
+        "字段说明",
+        "代码块",
+        "可解析"
+      ]
+    },
+    {
+      "id": "ai_prompt_fewshot",
+      "category": "AI应用开发",
+      "content": "掌握Few-shot提示技巧：在Prompt中提供少量输入输出示例，提升格式稳定性与回答质量，减少模型随机漂移。",
+      "keywords": [
+        "Few-shot",
+        "示例",
+        "输入输出",
+        "格式稳定",
+        "减少漂移"
+      ]
+    },
+    {
+      "id": "ai_agent_concept",
+      "category": "AI应用开发",
+      "content": "理解Agent概念：LLM作为决策核心，通过规划、观察、行动循环完成复杂任务，区别于单次问答。",
+      "keywords": [
+        "Agent",
+        "智能体",
+        "规划",
+        "行动",
+        "决策",
+        "复杂任务"
+      ]
+    },
+    {
+      "id": "ai_agent_tool",
+      "category": "AI应用开发",
+      "content": "掌握Agent工具调用：Function Calling机制，将外部能力（检索、计算、API）封装为工具，供模型按需调用。",
+      "keywords": [
+        "工具调用",
+        "Function Calling",
+        "外部能力",
+        "检索工具",
+        "API封装"
+      ]
+    },
+    {
+      "id": "ai_agent_multi",
+      "category": "AI应用开发",
+      "content": "掌握多Agent协作：将任务拆分为职责独立的子Agent（如解析、评估、优化），定义输入输出schema，通过编排串联形成流水线。",
+      "keywords": [
+        "多Agent",
+        "任务拆分",
+        "职责独立",
+        "schema",
+        "编排",
+        "流水线"
+      ]
+    },
+    {
+      "id": "ai_workflow",
+      "category": "AI应用开发",
+      "content": "掌握Workflow编排：将多个LLM调用步骤按依赖关系串联，每一步保存中间结果，便于调试与效果评估。",
+      "keywords": [
+        "Workflow",
+        "编排",
+        "步骤串联",
+        "中间结果",
+        "调试",
+        "效果评估"
+      ]
+    },
+    {
+      "id": "ai_rag_concept",
+      "category": "AI应用开发",
+      "content": "理解RAG（Retrieval-Augmented Generation）：在生成前先检索外部知识并注入上下文，减少幻觉、提升回答的准确性与可解释性。",
+      "keywords": [
+        "RAG",
+        "检索增强生成",
+        "外部知识",
+        "上下文注入",
+        "减少幻觉"
+      ]
+    },
+    {
+      "id": "ai_rag_flow",
+      "category": "AI应用开发",
+      "content": "掌握RAG检索流程：文档加载、文本切片、向量化、索引构建、相似度检索、top-k召回，形成完整检索链路。",
+      "keywords": [
+        "检索流程",
+        "加载",
+        "切片",
+        "向量化",
+        "索引",
+        "top-k",
+        "召回"
+      ]
+    },
+    {
+      "id": "ai_rag_inject",
+      "category": "AI应用开发",
+      "content": "掌握RAG上下文注入：将召回的文档片段拼接为结构化上下文，作为参考信息放入Prompt，约束模型基于知识作答。",
+      "keywords": [
+        "上下文注入",
+        "拼接",
+        "结构化上下文",
+        "参考信息",
+        "基于知识作答"
+      ]
+    },
+    {
+      "id": "ai_embedding_concept",
+      "category": "AI应用开发",
+      "content": "理解Embedding：将文本映射为稠密向量，语义相近的文本向量距离更近，是语义检索的基础。",
+      "keywords": [
+        "Embedding",
+        "向量化",
+        "稠密向量",
+        "语义",
+        "距离"
+      ]
+    },
+    {
+      "id": "ai_embedding_model",
+      "category": "AI应用开发",
+      "content": "掌握Embedding模型选型：使用sentence-transformers加载多语言模型，对中文查询与文档分别编码并做L2归一化，用余弦相似度检索。",
+      "keywords": [
+        "sentence-transformers",
+        "模型选型",
+        "多语言",
+        "L2归一化",
+        "余弦相似度"
+      ]
+    },
+    {
+      "id": "ai_vectordb_concept",
+      "category": "AI应用开发",
+      "content": "理解向量数据库：用于存储和检索高维向量，支持近似最近邻搜索，常见方案有FAISS、ChromaDB、Milvus、pgvector。",
+      "keywords": [
+        "向量数据库",
+        "高维向量",
+        "近似最近邻",
+        "FAISS",
+        "ChromaDB",
+        "Milvus",
+        "pgvector"
+      ]
+    },
+    {
+      "id": "ai_faiss",
+      "category": "AI应用开发",
+      "content": "掌握FAISS使用：通过IndexFlatIP（内积）配合L2归一化实现余弦相似度检索，支持索引持久化到磁盘与快速加载。",
+      "keywords": [
+        "FAISS",
+        "IndexFlatIP",
+        "内积",
+        "余弦相似度",
+        "索引持久化"
+      ]
+    },
+    {
+      "id": "ai_chroma",
+      "category": "AI应用开发",
+      "content": "掌握ChromaDB使用：轻量级向量数据库，支持持久化存储、元数据过滤与相似度查询，适合快速搭建RAG应用。",
+      "keywords": [
+        "ChromaDB",
+        "轻量级",
+        "持久化",
+        "元数据过滤",
+        "相似度查询"
+      ]
+    },
+    {
+      "id": "ai_langchain",
+      "category": "AI应用开发",
+      "content": "了解LangChain：提供LLM调用、Prompt模板、链式组合、检索器等抽象，用于快速构建LLM应用。",
+      "keywords": [
+        "LangChain",
+        "链式组合",
+        "检索器",
+        "抽象",
+        "LLM应用"
+      ]
+    },
+    {
+      "id": "ai_langgraph",
+      "category": "AI应用开发",
+      "content": "了解LangGraph：用图结构编排Agent状态流转，支持条件分支、循环与多Agent协作，构建可控的工作流。",
+      "keywords": [
+        "LangGraph",
+        "图结构",
+        "状态流转",
+        "条件分支",
+        "多Agent协作"
+      ]
+    },
+    {
+      "id": "ai_rag_eval",
+      "category": "AI应用开发",
+      "content": "掌握RAG效果评估：构建测试集，统计召回命中率、top-k相关性、生成质量，用指标指导检索与Prompt迭代。",
+      "keywords": [
+        "效果评估",
+        "测试集",
+        "命中率",
+        "相关性",
+        "生成质量",
+        "指标迭代"
+      ]
+    },
+    {
+      "id": "be_python",
+      "category": "后端开发",
+      "content": "掌握Python语言：熟悉基础语法、面向对象、标准库与常用第三方库，能编写清晰可维护的后端代码。",
+      "keywords": [
+        "Python",
+        "语法",
+        "面向对象",
+        "标准库",
+        "可维护"
+      ]
+    },
+    {
+      "id": "be_python_async",
+      "category": "后端开发",
+      "content": "掌握Python异步编程：理解asyncio事件循环、async/await、协程，能编写高并发的IO密集型服务。",
+      "keywords": [
+        "Python异步",
+        "asyncio",
+        "async/await",
+        "协程",
+        "高并发"
+      ]
+    },
+    {
+      "id": "be_fastapi",
+      "category": "后端开发",
+      "content": "掌握FastAPI：基于类型注解生成API文档，支持异步路由与参数校验，适合快速构建高性能接口服务。",
+      "keywords": [
+        "FastAPI",
+        "类型注解",
+        "API文档",
+        "异步路由",
+        "参数校验"
+      ]
+    },
+    {
+      "id": "be_flask",
+      "category": "后端开发",
+      "content": "了解Flask：轻量级Web框架，路由简单、扩展灵活，适合快速原型与中小型服务开发。",
+      "keywords": [
+        "Flask",
+        "轻量级",
+        "路由",
+        "扩展",
+        "快速原型"
+      ]
+    },
+    {
+      "id": "be_java",
+      "category": "后端开发",
+      "content": "掌握Java语言：熟悉面向对象、集合框架、异常处理、并发编程与JVM基础知识，具备扎实的工程化能力。",
+      "keywords": [
+        "Java",
+        "面向对象",
+        "集合框架",
+        "并发",
+        "JVM"
+      ]
+    },
+    {
+      "id": "be_springboot",
+      "category": "后端开发",
+      "content": "掌握Spring Boot：自动配置、依赖注入、REST接口、事务管理，能够快速搭建企业级后端应用。",
+      "keywords": [
+        "Spring Boot",
+        "自动配置",
+        "依赖注入",
+        "REST",
+        "事务"
+      ]
+    },
+    {
+      "id": "be_mybatis",
+      "category": "后端开发",
+      "content": "了解MyBatis：SQL映射框架，通过XML或注解管理SQL，支持动态SQL与多数据源。",
+      "keywords": [
+        "MyBatis",
+        "SQL映射",
+        "动态SQL",
+        "多数据源"
+      ]
+    },
+    {
+      "id": "be_mysql",
+      "category": "后端开发",
+      "content": "掌握MySQL：SQL查询、索引优化、事务与锁、慢查询分析，理解关系型数据库的存储与优化。",
+      "keywords": [
+        "MySQL",
+        "SQL",
+        "索引优化",
+        "事务",
+        "慢查询"
+      ]
+    },
+    {
+      "id": "be_redis",
+      "category": "后端开发",
+      "content": "掌握Redis：缓存设计、数据结构（string/hash/list/set/zset）、过期策略、持久化与高可用。",
+      "keywords": [
+        "Redis",
+        "缓存",
+        "数据结构",
+        "过期策略",
+        "持久化"
+      ]
+    },
+    {
+      "id": "be_linux",
+      "category": "后端开发",
+      "content": "掌握Linux：常用命令、文件权限、进程管理、日志查看、网络排查，具备服务部署与排障能力。",
+      "keywords": [
+        "Linux",
+        "常用命令",
+        "文件权限",
+        "进程管理",
+        "日志",
+        "排障"
+      ]
+    },
+    {
+      "id": "be_docker",
+      "category": "后端开发",
+      "content": "掌握Docker：镜像构建、容器运行、Dockerfile编写、网络与挂载，实现应用一键部署与隔离。",
+      "keywords": [
+        "Docker",
+        "镜像",
+        "容器",
+        "Dockerfile",
+        "部署"
+      ]
+    },
+    {
+      "id": "be_restful",
+      "category": "后端开发",
+      "content": "掌握RESTful API设计：资源化URL、HTTP方法语义、状态码规范、统一错误结构与鉴权。",
+      "keywords": [
+        "RESTful",
+        "API设计",
+        "HTTP方法",
+        "状态码",
+        "鉴权"
+      ]
+    },
+    {
+      "id": "be_microservice",
+      "category": "后端开发",
+      "content": "理解微服务架构：服务拆分、注册发现、负载均衡、熔断限流、分布式事务与链路追踪。",
+      "keywords": [
+        "微服务",
+        "服务拆分",
+        "注册发现",
+        "熔断限流",
+        "链路追踪"
+      ]
+    },
+    {
+      "id": "be_mq",
+      "category": "后端开发",
+      "content": "了解消息队列：使用Kafka、RabbitMQ实现异步解耦、削峰填谷与可靠投递。",
+      "keywords": [
+        "消息队列",
+        "Kafka",
+        "RabbitMQ",
+        "异步解耦",
+        "削峰填谷"
+      ]
+    },
+    {
+      "id": "be_logging",
+      "category": "后端开发",
+      "content": "掌握日志与监控：结构化日志、请求追踪ID、指标采集与告警，保障线上服务可观测性。",
+      "keywords": [
+        "日志",
+        "监控",
+        "结构化日志",
+        "追踪ID",
+        "可观测性"
+      ]
+    },
+    {
+      "id": "pe_model_call",
+      "category": "项目评价标准",
+      "content": "AI项目应体现模型调用能力：说明调用的模型与API、流式处理、超时重试与降级策略，证明LLM工程落地的稳定性。",
+      "keywords": [
+        "模型调用",
+        "LLM",
+        "流式",
+        "重试",
+        "降级",
+        "工程落地"
+      ]
+    },
+    {
+      "id": "pe_data_aug",
+      "category": "项目评价标准",
+      "content": "AI项目应体现数据增强能力：知识库建设、文档解析、向量化、检索召回，证明具备RAG数据链路搭建经验。",
+      "keywords": [
+        "数据增强",
+        "知识库",
+        "文档解析",
+        "向量化",
+        "RAG"
+      ]
+    },
+    {
+      "id": "pe_prompt_opt",
+      "category": "项目评价标准",
+      "content": "AI项目应体现Prompt优化：结构化输出约束、few-shot示例、字段清洗与解析兜底，证明对提示词工程有实践。",
+      "keywords": [
+        "Prompt优化",
+        "结构化输出",
+        "few-shot",
+        "解析兜底",
+        "提示词工程"
+      ]
+    },
+    {
+      "id": "pe_agent_flow",
+      "category": "项目评价标准",
+      "content": "AI项目应体现Agent流程：任务拆分、多步编排、中间结果落盘、失败降级，证明具备Agent架构设计能力。",
+      "keywords": [
+        "Agent流程",
+        "任务拆分",
+        "编排",
+        "中间结果",
+        "降级"
+      ]
+    },
+    {
+      "id": "pe_eval",
+      "category": "项目评价标准",
+      "content": "AI项目应体现效果验证：构建测试集、统计检索命中率与生成质量、对比优化前后指标，证明具备评测意识。",
+      "keywords": [
+        "效果验证",
+        "测试集",
+        "命中率",
+        "生成质量",
+        "评测"
+      ]
+    },
+    {
+      "id": "pe_metric",
+      "category": "项目评价标准",
+      "content": "优质项目要有量化指标：准确率、耗时、覆盖率、QPS等数据化结果，避免只说过程不量化成果。",
+      "keywords": [
+        "量化指标",
+        "准确率",
+        "耗时",
+        "覆盖率",
+        "QPS"
+      ]
+    },
+    {
+      "id": "pe_tech_diff",
+      "category": "项目评价标准",
+      "content": "优质项目要讲清技术难点：如向量检索精度、流式稳定性、长上下文截断，并说明如何定位与解决。",
+      "keywords": [
+        "技术难点",
+        "检索精度",
+        "稳定性",
+        "上下文",
+        "排障"
+      ]
+    },
+    {
+      "id": "pe_contribution",
+      "category": "项目评价标准",
+      "content": "优质项目要明确个人贡献：清楚说明自己负责的模块与产出，避免使用团队成果冒充个人能力。",
+      "keywords": [
+        "个人贡献",
+        "负责模块",
+        "产出",
+        "分工"
+      ]
+    },
+    {
+      "id": "pe_engineering",
+      "category": "项目评价标准",
+      "content": "优质项目要体现工程化能力：模块分层、日志、配置管理、错误处理、可复用与可维护性。",
+      "keywords": [
+        "工程化",
+        "模块分层",
+        "日志",
+        "配置管理",
+        "可维护"
+      ]
+    },
+    {
+      "id": "pe_review",
+      "category": "项目评价标准",
+      "content": "优质项目要有复盘改进意识：识别不足、给出后续优化方向（如rerank、混合检索、增量索引）。",
+      "keywords": [
+        "复盘",
+        "改进",
+        "优化方向",
+        "rerank",
+        "混合检索"
+      ]
+    },
+    {
+      "id": "ai_rule_core",
+      "category": "AI应用开发",
+      "content": "AI应用开发岗位判别规则：核心能力=LLM API调用 + Prompt Engineering + RAG/向量检索。简历中三项全部有实践 → ability可评'较强'；仅调用过API但无RAG或Prompt实践 → ability至多'中等'。",
+      "keywords": [
+        "AI应用",
+        "判别规则",
+        "LLM API",
+        "Prompt Engineering",
+        "RAG",
+        "向量检索",
+        "能力分级"
+      ]
+    },
+    {
+      "id": "ai_rule_deploy",
+      "category": "AI应用开发",
+      "content": "AI应用开发岗位判别规则：模型部署/评测/量化/推理加速属于进阶项。简历缺少部署与评测实战经验时，experience应评'中等'而非'较强'；若JD以部署调优为主而简历仅有应用层经验，overall至多'中等'。",
+      "keywords": [
+        "模型部署",
+        "评测",
+        "量化",
+        "推理加速",
+        "判别规则",
+        "经验分级"
+      ]
+    },
+    {
+      "id": "ai_rule_agent",
+      "category": "AI应用开发",
+      "content": "AI应用开发岗位判别规则：对话系统/Agent方向要求工具调用（Function Calling）、多轮对话、流式SSE。缺少工具调用实战 → 记为gap并计入weaknesses；仅写过多轮对话但无工具调用 → risk评'需要优化'。",
+      "keywords": [
+        "工具调用",
+        "Function Calling",
+        "多轮对话",
+        "流式SSE",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "ai_rule_structure",
+      "category": "AI应用开发",
+      "content": "AI应用开发岗位判别规则：LLM输出结构化解析、JSON Schema约束、异常重试与降级属于工程稳定性能力。简历同时具备解析、重试、降级三项实践且无缺口时，可评ability'较强'、risk'风险较低'。",
+      "keywords": [
+        "结构化解析",
+        "JSON Schema",
+        "异常重试",
+        "降级",
+        "判别规则",
+        "工程稳定性"
+      ]
+    },
+    {
+      "id": "py_rule_web",
+      "category": "Python开发",
+      "content": "Python开发岗位判别规则：Web方向核心技术栈=Django/Flask/FastAPI + MySQL + Redis + RESTful。简历与JD技术栈逐项对应且无缺失 → ability'较强'、risk'风险较低'；缺少任一核心技术（如异步任务队列Celery） → 记为gap，overall至多'中等'。",
+      "keywords": [
+        "Python",
+        "Django",
+        "Flask",
+        "FastAPI",
+        "MySQL",
+        "Redis",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "py_rule_data",
+      "category": "Python开发",
+      "content": "Python开发岗位判别规则：数据方向核心技能=Pandas、NumPy、SQL、数据清洗、ETL。简历有Pandas/NumPy/SQL但对ETL仅'基础了解'无实战项目 → experience评'中等'，ETL记为gap。",
+      "keywords": [
+        "Pandas",
+        "NumPy",
+        "SQL",
+        "数据清洗",
+        "ETL",
+        "判别规则"
+      ]
+    },
+    {
+      "id": "py_rule_crawler",
+      "category": "Python开发",
+      "content": "Python开发岗位判别规则：爬虫方向核心技能=Scrapy、反爬对抗、分布式采集、数据入库。用过Scrapy但缺分布式采集经验 → 分布式采集记为gap，overall评'中等'而非'较高'。",
+      "keywords": [
+        "Scrapy",
+        "反爬",
+        "分布式采集",
+        "爬虫",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "py_rule_test",
+      "category": "Python开发",
+      "content": "Python开发岗位判别规则：测试方向核心技能=pytest、接口自动化、CI集成、性能测试。四项均有实践且无缺口 → overall'较高'、risk'风险较低'；仅有简单性能脚本 → 性能测试深度不足，记入weaknesses。",
+      "keywords": [
+        "pytest",
+        "接口自动化",
+        "CI",
+        "性能测试",
+        "判别规则"
+      ]
+    },
+    {
+      "id": "py_rule_ops",
+      "category": "Python开发",
+      "content": "Python开发岗位判别规则：运维方向核心技能=Linux、Shell、Python脚本、监控告警、容器编排。了解Docker但缺K8s实战 → K8s记为gap，experience评'中等'，overall评'中等'。",
+      "keywords": [
+        "Linux",
+        "Shell",
+        "监控告警",
+        "K8s",
+        "容器编排",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "py_rule_fullstack",
+      "category": "Python开发",
+      "content": "Python开发岗位判别规则：全栈方向要求后端（FastAPI/SQLAlchemy）+前端（Vue/React）+消息队列。前端仅用过但后端熟练 → 前端经验深度不足记入weaknesses；消息队列无实战 → 记为gap，overall至多'中等'。",
+      "keywords": [
+        "FastAPI",
+        "SQLAlchemy",
+        "Vue",
+        "React",
+        "消息队列",
+        "全栈",
+        "判别规则"
+      ]
+    },
+    {
+      "id": "java_rule_core",
+      "category": "Java后端",
+      "content": "Java后端岗位判别规则：核心技术栈=Spring Boot + MyBatis + MySQL + Redis。简历技术栈与JD逐项对应且项目真实落地 → ability'较强'；缺少Spring Boot或MyBatis任一项 → 记为gap，ability至多'中等'。",
+      "keywords": [
+        "Java",
+        "Spring Boot",
+        "MyBatis",
+        "MySQL",
+        "Redis",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "java_rule_micro",
+      "category": "Java后端",
+      "content": "Java后端岗位判别规则：JD要求微服务架构时，重点核查Spring Cloud、注册发现、分布式事务实战。简历仅单体项目经验 → 微服务架构记为gap，experience评'中等'，overall至多'中等'，risk评'需要优化'。",
+      "keywords": [
+        "微服务",
+        "Spring Cloud",
+        "注册发现",
+        "分布式事务",
+        "单体",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "java_rule_jvm",
+      "category": "Java后端",
+      "content": "Java后端岗位判别规则：JD要求JVM调优/并发编程深度时，区分'了解JVM'与'有GC调优/线程池实战'。仅了解概念无调优实战 → 该项记为gap，ability评'中等'。",
+      "keywords": [
+        "JVM",
+        "调优",
+        "并发编程",
+        "GC",
+        "线程池",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "java_rule_db",
+      "category": "Java后端",
+      "content": "Java后端岗位判别规则：JD要求数据库深度时，核查索引优化、慢查询治理、分库分表实战。仅会CRUD与基础SQL → 数据库深度不足记入weaknesses，experience至多'中等'。",
+      "keywords": [
+        "索引优化",
+        "慢查询",
+        "分库分表",
+        "数据库深度",
+        "判别规则"
+      ]
+    },
+    {
+      "id": "be_rule_general",
+      "category": "普通后端",
+      "content": "普通后端岗位判别规则：通用四要素=语言+Web框架+数据库+缓存。四要素全部命中且项目有落地 → overall'较高'；缺任意一项 → 该项记为gap，overall至多'中等'。",
+      "keywords": [
+        "后端",
+        "语言",
+        "框架",
+        "数据库",
+        "缓存",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "be_rule_deploy",
+      "category": "普通后端",
+      "content": "普通后端岗位判别规则：部署能力判别=Linux + Docker + CI/CD。简历仅了解容器概念无部署实战 → 部署经验记为gap，experience评'中等'；有完整部署上线经历 → 该项为match。",
+      "keywords": [
+        "Linux",
+        "Docker",
+        "CI/CD",
+        "部署",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "be_rule_api",
+      "category": "普通后端",
+      "content": "普通后端岗位判别规则：接口设计判别=RESTful规范 + 鉴权（JWT/OAuth） + 统一错误结构。简历仅实现过简单接口无鉴权设计 → 接口设计深度不足记入weaknesses。",
+      "keywords": [
+        "RESTful",
+        "鉴权",
+        "JWT",
+        "OAuth",
+        "接口设计",
+        "判别规则"
+      ]
+    },
+    {
+      "id": "be_rule_high_concurrency",
+      "category": "普通后端",
+      "content": "普通后端岗位判别规则：JD要求高并发/性能优化时，核查缓存实战、压测数据、QPS量化结果。无压测与量化数据 → 性能优化能力记为gap，overall至多'中等'；有量化成果 → 记为match并计入strengths。",
+      "keywords": [
+        "高并发",
+        "性能优化",
+        "压测",
+        "QPS",
+        "缓存",
+        "判别规则",
+        "gap"
+      ]
+    },
+    {
+      "id": "mr_tech_stack",
+      "category": "岗位技能匹配规则",
+      "content": "匹配规则：优先比较JD核心技术栈与候选人技能的重叠度，重叠越多匹配度越高，逐项列出匹配与缺失。",
+      "keywords": [
+        "技术栈",
+        "重叠度",
+        "匹配",
+        "缺失",
+        "JD要求"
+      ]
+    },
+    {
+      "id": "mr_depth",
+      "category": "岗位技能匹配规则",
+      "content": "匹配规则：评估项目经历是否体现所需技术深度，是否有真实落地场景与结果，而非仅罗列关键词。",
+      "keywords": [
+        "技术深度",
+        "项目经历",
+        "落地场景",
+        "结果"
+      ]
+    },
+    {
+      "id": "mr_metric",
+      "category": "岗位技能匹配规则",
+      "content": "匹配规则：用量化成果证明能力，性能提升、效率提升、准确率等数据比空泛描述更有说服力。",
+      "keywords": [
+        "量化成果",
+        "数据",
+        "性能",
+        "效率",
+        "准确率"
+      ]
+    },
+    {
+      "id": "mr_gap",
+      "category": "岗位技能匹配规则",
+      "content": "匹配规则：识别能力差距后给出可补强的具体路径，如补充某技术栈项目、突出某段经历或补充评测数据。",
+      "keywords": [
+        "能力差距",
+        "补强路径",
+        "补充项目",
+        "突出经历"
+      ]
+    },
+    {
+      "id": "mr_ai",
+      "category": "岗位技能匹配规则",
+      "content": "AI岗位专项匹配：重点检索LLM调用、Prompt工程、Agent、RAG、Embedding、向量数据库等能力，而非传统CRUD经验。",
+      "keywords": [
+        "AI岗位",
+        "LLM",
+        "Prompt",
+        "Agent",
+        "RAG",
+        "Embedding",
+        "向量数据库"
+      ]
+    },
+    {
+      "id": "mr_be",
+      "category": "岗位技能匹配规则",
+      "content": "后端岗位专项匹配：重点检索语言、框架、数据库、缓存、Linux、Docker与高并发经验，与技术栈严格对应。",
+      "keywords": [
+        "后端岗位",
+        "框架",
+        "数据库",
+        "缓存",
+        "Linux",
+        "Docker",
+        "高并发"
+      ]
+    },
+    {
+      "id": "bc_scope_upgrade",
+      "category": "简历表达Bad Case",
+      "content": "责任范围升级Bad Case：简历原文写参与XX模块开发，改写建议不得升级为主导XX模块或独立负责XX模块，除非原文明确包含主导/独立/负责等表述。措辞必须与原文事实等级一致。",
+      "keywords": [
+        "Bad Case",
+        "措辞升级",
+        "责任范围",
+        "参与vs主导",
+        "事实边界"
+      ]
+    },
+    {
+      "id": "bc_fake_tech",
+      "category": "简历表达Bad Case",
+      "content": "新增技术Bad Case：简历未提及的技术（如Docker、K8s、LangGraph、Milvus、Function Calling、熔断）不得出现在改写建议中。JD要求但简历未体现的技术，只能写入当前简历未体现XX技术实践，不得建议直接写进简历。",
+      "keywords": [
+        "Bad Case",
+        "技术虚构",
+        "新增技术",
+        "事实边界"
+      ]
+    },
+    {
+      "id": "bc_fake_metric",
+      "category": "简历表达Bad Case",
+      "content": "虚构量化指标Bad Case：不得新增简历原文中不存在的数字、百分比、倍数量词（如性能提升50%、效率提升3倍、支持QPS 10000）。任何数字类表述必须能在简历原文中追溯到相同数值。",
+      "keywords": [
+        "Bad Case",
+        "虚构数字",
+        "量化指标",
+        "事实边界"
+      ]
+    },
+    {
+      "id": "bc_project_wrap",
+      "category": "简历表达Bad Case",
+      "content": "项目级别包装Bad Case：个人项目/学习项目不得包装为生产级、工业级、高可用、高并发、大规模、千万级用户等生产级表述，除非简历原文明确说明该项目已上线生产环境并实际被大量用户使用。",
+      "keywords": [
+        "Bad Case",
+        "项目级别",
+        "生产级",
+        "高可用",
+        "事实边界"
+      ]
+    },
+    {
+      "id": "bc_skill_upgrade",
+      "category": "简历表达Bad Case",
+      "content": "能力等级升级Bad Case：不得将简历中的了解/熟悉升级为精通，不得将掌握API调用升级为具备架构设计能力。技能表述等级必须与原文一致，推断性能力必须标注（推断）。",
+      "keywords": [
+        "Bad Case",
+        "措辞升级",
+        "技能等级",
+        "精通vs熟悉",
+        "事实边界"
+      ]
+    },
+    {
+      "id": "bc_no_original",
+      "category": "简历表达Bad Case",
+      "content": "original不可追溯Bad Case：rewrite_suggestions中的original字段必须是简历原文的真实摘录，不得编造。如果简历中找不到能支撑改写的原文片段，说明该项改写缺乏事实基础，应该放弃或降级为supplement建议。",
+      "keywords": [
+        "Bad Case",
+        "原文追溯",
+        "original字段",
+        "事实边界"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+[
+  {
+    "case_id": "jd_03",
+    "source_run": "run1",
+    "original": "设计 LLM Provider 抽象服务层，解耦 Agent 与底层模型调用",
+    "revised": "设计 LLM Provider 抽象服务层，解耦 Agent 与底层模型调用，体现了系统架构设计能力",
+    "expected_types": [
+      "skill_upgrade"
+    ],
+    "review_note": "系统架构设计 → 降级为 skill_upgrade（original 有设计 + 解耦 + 封装）"
+  },
+  {
+    "case_id": "jd_03",
+    "source_run": "run1",
+    "original": "基于 FastAPI 和 LLM 构建智能简历分析系统",
+    "revised": "基于 FastAPI 和 LLM 构建智能简历分析系统，实现任务拆解、从 0 到 1 构建",
+    "expected_types": [],
+    "review_note": "0 和 1 不是 fake_metric"
+  },
+  {
+    "case_id": "jd_04",
+    "source_run": "run1",
+    "original": "掌握 LLM应用开发流程，具备大模型API调用、Prompt Engineering、Agent Workflow设计以及AI应用后端集成经验。",
+    "revised": "掌握 LLM 应用开发全流程，能够独立完成 AI 应用开发闭环。",
+    "expected_types": [
+      "skill_upgrade"
+    ],
+    "review_note": "独立完成 → 措辞升级"
+  },
+  {
+    "case_id": "jd_04",
+    "source_run": "run2",
+    "original": "掌握 LLM应用开发流程，具备大模型API调用、Prompt Engineering、Agent Workflow设计以及AI应用后端集成经验。",
+    "revised": "掌握 LLM 应用开发全流程，从 0 到 1 构建完整 AI Native 应用",
+    "expected_types": [],
+    "review_note": "0-1 是项目阶段"
+  },
+  {
+    "case_id": "jd_05",
+    "source_run": "run2",
+    "original": "掌握 Agent Workflow设计方法",
+    "revised": "掌握 Agent Workflow 设计方法，为 aiagent 工具链建设提供支撑",
+    "expected_types": [],
+    "review_note": "aiagent 归一化为 agent → 简历有 Agent Workflow"
+  },
+  {
+    "case_id": "jd_01",
+    "source_run": "run1",
+    "original": "掌握 LLM应用开发流程，具备大模型API调用、Prompt Engineering、Agent Workflow设计以及AI应用后端集成经验。",
+    "revised": "掌握 LLM 应用开发全流程，具备大模型 API 调用、Prompt Engineering、Agent Workflow 设计能力。",
+    "expected_types": [],
+    "review_note": "等价改写"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "基于 FastAPI 和 LLM 构建智能简历分析系统",
+    "revised": "基于 FastAPI 和 LLM 构建智能简历分析系统，效率提升 3 倍",
+    "expected_types": [
+      "fake_metric"
+    ],
+    "review_note": "3 倍是真实指标"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "掌握 FastAPI/Django 框架",
+    "revised": "掌握 FastAPI/Django 框架，性能提升 60%",
+    "expected_types": [
+      "fake_metric"
+    ],
+    "review_note": "60% 是真实指标"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "面向 300+内部运维人员 提供 SQL 发布、服务器配置管理等业务能力",
+    "revised": "支撑 500+ 并发用户",
+    "expected_types": [
+      "fake_metric"
+    ],
+    "review_note": "500+ 是真实指标"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "基于 Paramiko实现SSH远程连接与SFTP文件管理",
+    "revised": "基于 Paramiko 实现 20ms 响应延迟的 SSH 连接",
+    "expected_types": [
+      "fake_metric"
+    ],
+    "review_note": "20ms 是真实指标"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "基于 FastAPI 和 LLM 构建智能简历分析系统",
+    "revised": "基于 FastAPI 和 LLM 从 0 到 1 构建完整系统",
+    "expected_types": [],
+    "review_note": "0-1 是项目阶段"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "基于 FastAPI 和 LLM 构建智能简历分析系统",
+    "revised": "实现版本 v2.0 升级",
+    "expected_types": [],
+    "review_note": "v2.0 是版本号"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "基于 FastAPI 和 LLM 构建智能简历分析系统",
+    "revised": "完成第 3 模块开发",
+    "expected_types": [],
+    "review_note": "第 3 模块是章节号"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "掌握 Agent Workflow设计方法",
+    "revised": "熟练掌握 AI Agent 架构设计",
+    "expected_types": [],
+    "review_note": "AI Agent 归一化为 agent → 简历有 Agent Workflow"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "基于 FastAPI 和 LLM 构建智能简历分析系统",
+    "revised": "基于 Kubernetes + Docker 容器化 FastAPI 微服务",
+    "expected_types": [
+      "fact_invention"
+    ],
+    "review_note": "简历没有 Kubernetes/Docker"
+  },
+  {
+    "case_id": "reg",
+    "source_run": "人工构造",
+    "original": "设计 LLM Provider 抽象服务层，解耦 Agent 与底层模型调用",
+    "revised": "设计 LLM Provider 抽象服务层，具备完整的系统架构设计能力",
+    "expected_types": [
+      "skill_upgrade"
+    ],
+    "review_note": "系统架构设计 → 降级"
+  }
+]
