@@ -289,6 +289,17 @@ def main():
     print("\n" + "=" * 70)
     print(f"自动化通过: {total_pass}  |  自动化失败: {total_fail}  |  待人工复核: {total_manual}")
     print(f"有失败的 Case: {cases_fail}/{len(cases)}")
+
+    # 自动导出逐 case 明细（避免手动抄表错误）
+    print(f"\n{'Case':<50s} {'PASS':>4s} {'FAIL':>4s} {'MANUAL':>7s} {'total':>5s}")
+    print("-" * 78)
+    for cr_case in report["cases"]:
+        p = sum(1 for c in cr_case["checks"] if c["result"] == RESULT_PASS)
+        f = sum(1 for c in cr_case["checks"] if c["result"] == RESULT_FAIL)
+        m = sum(1 for c in cr_case["checks"] if c["result"] == RESULT_MANUAL)
+        t = p + f + m
+        print(f"{cr_case['case_id']:<50s} {p:>4d} {f:>4d} {m:>7d} {t:>5d}")
+    print(f"{'TOTAL':<50s} {total_pass:>4d} {total_fail:>4d} {total_manual:>7d} {total_pass+total_fail+total_manual:>5d}")
     print("=" * 70)
 
     # 保存报告（脱敏：不回显完整简历/JD）
