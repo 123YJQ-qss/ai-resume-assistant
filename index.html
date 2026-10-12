@@ -326,6 +326,7 @@ AI产品经理岗位：
                                 <span class="verbal-label">综合匹配程度</span>
                                 <span class="verbal-value high">较高</span>
                             </div>
+                            <p class="match-summary" id="matchSummary">基于 JD 核心要求与简历内容对比...</p>
                             <div class="verbal-items">
                                 <div class="verbal-item">
                                     <span class="verbal-label">能力匹配</span>
@@ -341,6 +342,27 @@ AI产品经理岗位：
                                 </div>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- 关键差距 -->
+                    <div class="result-card" id="gapCard">
+                        <div class="card-header result-header">
+                            <h3>⚠️ 关键差距 Top 3</h3>
+                            <span class="card-badge">优先补全</span>
+                        </div>
+                        <div class="card-body" id="gapContent">
+                            <!-- 动态渲染 -->
+                        </div>
+                    </div>
+
+                    <!-- 下一步引导 -->
+                    <div class="next-steps">
+                        <button class="next-btn secondary" onclick="switchTab('detail')">
+                            <span>🔍</span> 查看详细分析
+                        </button>
+                        <button class="next-btn primary" onclick="switchTab('rewrite')">
+                            <span>✏️</span> 开始优化简历
+                        </button>
                     </div>
                 </div>
 

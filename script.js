@@ -408,6 +408,7 @@ function renderAnalysisResult(data, dataSource, warning) {
 
     // 1. 渲染岗位匹配分析
     renderMatchLevel(data.match_level);
+    renderKeyGaps(data);
     
     // 2. 渲染AI判断依据
     renderAnalysisBasis(data.analysis_basis);
@@ -479,26 +480,94 @@ function renderMatchLevel(matchLevel) {
     const container = document.querySelector('.match-content-verbal');
     if (!container || !matchLevel) return;
 
-    container.innerHTML = `
-        <div class="verbal-item overall">
-            <span class="verbal-label">综合匹配程度</span>
-            <span class="verbal-value high">${matchLevel.overall || '待评估'}</span>
+    // 匹配总结文字
+    const summaryMap = {
+        '较高': '核心技术栈与岗位高度匹配，建议重点突出项目成果和 AI 落地经验。',
+        '中等': '技术方向基本对口，但缺少一些关键经历或量化成果，建议补充项目细节。',
+        '较低': '方向有偏差，需要在简历中重点强化岗位相关的技术栈和项目经历。',
+        '需要优化': '岗位风险较高，建议先做针对性优化再投递。',
+        '待评估': '正在评估中...'
+    };
+    const overall = matchLevel.overall || '待评估';
+    const summary = summaryMap[overall] || '基于 JD 核心要求与简历内容的综合判断。';
+
+    // 更新总结
+    const summaryEl = document.getElementById('matchSummary');
+    if (summaryEl) summaryEl.textContent = summary;
+
+    // 更新四个匹配标签（只改文字，不改 DOM 结构）
+    const overallVal = container.querySelector('.verbal-item.overall .verbal-value');
+    if (overallVal) overallVal.textContent = overall;
+
+    const subItems = container.querySelectorAll('.verbal-items .verbal-item');
+    const subKeys = ['ability', 'experience', 'risk'];
+    subItems.forEach((item, i) => {
+        const key = subKeys[i];
+        const val = matchLevel[key] || '待评估';
+        const valEl = item.querySelector('.verbal-value');
+        if (valEl) valEl.textContent = val;
+    });
+}
+
+/**
+ * 全局切换 Tab（用于 onclick 跳转）
+ */
+function switchTab(tabName) {
+    document.querySelectorAll('.result-tab').forEach(t => t.classList.remove('active'));
+    const tab = document.querySelector('.result-tab[data-tab="' + tabName + '"]');
+    if (tab) tab.classList.add('active');
+    document.querySelectorAll('.result-tab-pane').forEach(p => p.classList.remove('active'));
+    const pane = document.getElementById('tab-' + tabName);
+    if (pane) {
+        pane.classList.add('active');
+        const tabs = document.querySelector('.result-tabs');
+        if (tabs) tabs.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+window.switchTab = switchTab;
+
+/**
+ * 渲染关键差距 Top3
+ */
+function renderKeyGaps(data) {
+    const body = document.getElementById('gapContent');
+    if (!body) return;
+
+    const allGaps = [];
+    (data.analysis_basis || []).forEach(dim => {
+        (dim.items || []).forEach(item => {
+            if (item.type === 'gap') {
+                allGaps.push({
+                    content: item.content,
+                    degree: item.match_degree || '低',
+                    dimension: dim.dimension || ''
+                });
+            }
+        });
+    });
+
+    const degreePriority = { '低': 0, '中': 1, '高': 2 };
+    allGaps.sort((a, b) => (degreePriority[a.degree] || 0) - (degreePriority[b.degree] || 0));
+
+    const topGaps = allGaps.slice(0, 3);
+
+    if (topGaps.length === 0) {
+        body.innerHTML = '<p class="placeholder-text">暂未发现关键差距 ✨</p>';
+        return;
+    }
+
+    body.innerHTML = topGaps.map((gap, idx) => `
+        <div class="gap-item">
+            <span class="gap-num">${idx + 1}</span>
+            <div class="gap-info">
+                <div class="gap-content">${gap.content}</div>
+                <div class="gap-meta">
+                    <span class="gap-dim">${gap.dimension}</span>
+                    <span class="gap-level">匹配度：${gap.degree}</span>
+                </div>
+            </div>
         </div>
-        <div class="verbal-items">
-            <div class="verbal-item">
-                <span class="verbal-label">能力匹配</span>
-                <span class="verbal-value strong">${matchLevel.ability || '待评估'}</span>
-            </div>
-            <div class="verbal-item">
-                <span class="verbal-label">经历匹配</span>
-                <span class="verbal-value medium">${matchLevel.experience || '待评估'}</span>
-            </div>
-            <div class="verbal-item">
-                <span class="verbal-label">岗位风险</span>
-                <span class="verbal-value warn">${matchLevel.risk || '待评估'}</span>
-            </div>
-        </div>
-    `;
+    `).join('');
 }
 
 /**
