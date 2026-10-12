@@ -141,11 +141,22 @@ def script_js():
 # 健康检查
 @app.get("/api/health")
 def health():
+    _api_key = llm_service._api_key()
+    _model = llm_service._model()
     return {
         "status": "ok",
         "message": "AI Resume Assistant API is running",
         "provider": llm_service.get_provider(),
         "llm_configured": llm_service.is_configured(),
+        # 调试：显示 Render 上环境变量的真实读取状态
+        "debug": {
+            "DEEPSEEK_API_KEY_present": bool(os.getenv("DEEPSEEK_API_KEY")),
+            "DEEPSEEK_API_KEY_len": len(os.getenv("DEEPSEEK_API_KEY", "")),
+            "LLM_PROVIDER": os.getenv("LLM_PROVIDER"),
+            "MODEL_NAME": os.getenv("MODEL_NAME"),
+            "model_in_use": _model,
+            "api_key_from_service_len": len(_api_key),
+        },
     }
 
 
