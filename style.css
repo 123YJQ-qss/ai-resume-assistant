@@ -1851,10 +1851,25 @@ body {
 .gap-meta {
     margin-top: 6px;
     display: flex;
-    gap: 12px;
+    gap: 10px;
     font-size: 0.75rem;
     color: var(--text-muted);
+    flex-wrap: wrap;
+    align-items: center;
 }
+
+.gap-type {
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 100px;
+}
+
+.tag-expr   { background: rgba(99, 102, 241, 0.15); color: var(--accent-light); }
+.tag-confirm{ background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+.tag-gap    { background: rgba(239, 68, 68, 0.15);  color: #fca5a5; }
+.tag-info   { background: rgba(168, 85, 247, 0.15); color: #c4b5fd; }
+.tag-unknown{ background: rgba(100, 116, 139, 0.15); color: var(--text-muted); }
 
 .gap-level {
     color: var(--warning);

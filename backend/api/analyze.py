@@ -163,11 +163,71 @@ def clean_array_field(field):
     return result
 
 
+def _rewrite_has_substantive_change(original, revised):
+    """判断改写是否有实质性变化（过滤微改动/空泛追加）。
+
+    返回 False 表示应丢弃这条改写。
+
+    检测规则：
+    1. 完全相同 → 丢弃
+    2. revised 长度比 original 长 > 30% 且尾部追加了独立短句（逗号/句号结尾） → 可能是空泛追加
+    3. 字符级差异率（以较长者为基准）< 10% → 改动太小，丢弃
+    """
+    if not original or not revised:
+        return False
+    o = original.strip()
+    r = revised.strip()
+    if o == r:
+        return False
+
+    # 计算字符级差异（基于 set 交集粗略估算，不是精确 diff）
+    longer = max(len(o), len(r))
+    if longer == 0:
+        return False
+    # 简单的差异估计：用包含关系
+    if r in o or o in r:
+        # 一个是另一个的子串 → 差异很小
+        diff_ratio = abs(len(o) - len(r)) / longer
+        if diff_ratio < 0.15:
+            return False
+
+    # 检查是否只在尾部追加了短句
+    if len(r) > len(o) * 1.3:
+        # 看 revised 去掉 original 内容后剩下的部分
+        remaining = r.replace(o, "").strip()
+        # 如果剩下的很短（< 15 字）且是评价性短语
+        _EMPTY_PHRASES = [
+            "体现了", "保障了", "有利于", "支持", "有助于",
+            "具备较强", "具有较好", "展现了", "展示了",
+            "提升了", "优化了", "完善了",
+        ]
+        if len(remaining) < 20 and any(p in remaining for p in _EMPTY_PHRASES):
+            return False
+
+    return True
+
+
 def normalize_result(data):
-    """规范化结果，补全缺失字段"""
+    """规范化结果，补全缺失字段 + 过滤低质量 rewrite"""
     data = data or {}
     ml = data.get("match_level") or {}
     advice = data.get("optimization_advice") or {}
+
+    # 过滤低质量 rewrite_suggestions
+    raw_rewrites = data.get("rewrite_suggestions")
+    if isinstance(raw_rewrites, list):
+        filtered = []
+        for item in raw_rewrites:
+            if not isinstance(item, dict):
+                continue
+            if _rewrite_has_substantive_change(
+                item.get("original", ""), item.get("revised", "")
+            ):
+                filtered.append(item)
+        rewrite_suggestions = filtered
+    else:
+        rewrite_suggestions = []
+
     result = {
         "match_level": {
             "overall": ml.get("overall") or "待评估",
@@ -178,7 +238,7 @@ def normalize_result(data):
         "analysis_basis": clean_array_field(data.get("analysis_basis")),
         "strengths": clean_array_field(data.get("strengths")),
         "weaknesses": clean_array_field(data.get("weaknesses")),
-        "rewrite_suggestions": clean_array_field(data.get("rewrite_suggestions")),
+        "rewrite_suggestions": rewrite_suggestions,
         "optimization_advice": {
             "highlight": clean_array_field(advice.get("highlight")),
             "supplement": clean_array_field(advice.get("supplement")),

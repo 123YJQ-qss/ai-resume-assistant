@@ -510,6 +510,31 @@ function renderMatchLevel(matchLevel) {
 }
 
 /**
+ * 解析文本开头的 [类型标记]，返回 { type, text }
+ * 支持的类型：表达优化 / 事实待确认 / 能力缺口 / 需补充真实信息
+ */
+function parseTypeTag(raw) {
+    if (!raw || typeof raw !== 'string') return { type: null, text: '' };
+    const m = raw.match(/^\s*\[([^\]]+)\]\s*/);
+    if (m) {
+        return { type: m[1].trim(), text: raw.slice(m[0].length).trim() };
+    }
+    return { type: null, text: raw.trim() };
+}
+
+/**
+ * 把类型映射为 UI 显示用的 key 和样式 class
+ */
+function typeTagStyle(type) {
+    if (!type) return { key: 'unknown', cls: 'tag-unknown', label: '待分类' };
+    if (type.includes('表达')) return { key: 'expr', cls: 'tag-expr', label: '表达优化' };
+    if (type.includes('事实')) return { key: 'confirm', cls: 'tag-confirm', label: '事实待确认' };
+    if (type.includes('能力')) return { key: 'gap', cls: 'tag-gap', label: '能力缺口' };
+    if (type.includes('补充')) return { key: 'info', cls: 'tag-info', label: '需真实信息' };
+    return { key: 'other', cls: 'tag-other', label: type };
+}
+
+/**
  * 全局切换 Tab（用于 onclick 跳转）
  */
 function switchTab(tabName) {
@@ -556,18 +581,23 @@ function renderKeyGaps(data) {
         return;
     }
 
-    body.innerHTML = topGaps.map((gap, idx) => `
+    body.innerHTML = topGaps.map((gap, idx) => {
+        const parsed = parseTypeTag(gap.content);
+        const tag = typeTagStyle(parsed.type);
+        return `
         <div class="gap-item">
             <span class="gap-num">${idx + 1}</span>
             <div class="gap-info">
-                <div class="gap-content">${gap.content}</div>
+                <div class="gap-content">${parsed.text || gap.content}</div>
                 <div class="gap-meta">
+                    ${parsed.type ? `<span class="gap-type ${tag.cls}">${tag.label}</span>` : ''}
                     <span class="gap-dim">${gap.dimension}</span>
                     <span class="gap-level">匹配度：${gap.degree}</span>
                 </div>
             </div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 /**
@@ -669,10 +699,31 @@ function renderWeaknesses(weaknesses) {
 /**
  * 简易字符级 Diff：返回 {text, type: 'keep'|'del'|'add'} 数组
  * 基于 LCS（最长公共子序列）
+ *
+ * 长文本保护：original 或 revised 长度 > 300 字符时，退化为"整段标记"
+ * （LCS 是 O(m×n)，长文本会卡死主线程）
  */
 function diffChars(orig, rev) {
     if (!orig) return rev ? [{ text: rev, type: 'add' }] : [];
     if (!rev) return [{ text: orig, type: 'del' }];
+
+    // 长文本保护：退化为简单的"整体对比"
+    const MAX_CHAR_DIFF_LEN = 300;
+    if (orig.length > MAX_CHAR_DIFF_LEN || rev.length > MAX_CHAR_DIFF_LEN) {
+        if (orig === rev) return [{ text: orig, type: 'keep' }];
+        // 粗略：前 80% 相同的部分算 keep，后面算 add
+        const minLen = Math.min(orig.length, rev.length);
+        let sameEnd = 0;
+        for (let i = 0; i < minLen; i++) {
+            if (orig[i] === rev[i]) sameEnd = i + 1;
+            else break;
+        }
+        const result = [];
+        if (sameEnd > 0) result.push({ text: orig.slice(0, sameEnd), type: 'keep' });
+        if (orig.slice(sameEnd)) result.push({ text: orig.slice(sameEnd), type: 'del' });
+        if (rev.slice(sameEnd)) result.push({ text: rev.slice(sameEnd), type: 'add' });
+        return result;
+    }
 
     const m = orig.length, n = rev.length;
     // 构建 LCS 矩阵
@@ -799,29 +850,50 @@ function copyRewrite(btn, idx) {
 }
 window.copyRewrite = copyRewrite;
 
-/** 采纳改写 */
-function acceptRewrite(btn) {
+/** 本地持久化 key */
+const _LS_REWRITE_STATE = 'ai_resume_rewrite_state';
+
+function _loadRewriteState() {
+    try { return JSON.parse(localStorage.getItem(_LS_REWRITE_STATE)) || {}; }
+    catch { return {}; }
+}
+function _saveRewriteState(state) {
+    try { localStorage.setItem(_LS_REWRITE_STATE, JSON.stringify(state)); } catch {}
+}
+
+/** 采纳改写（本地持久化） */
+function acceptRewrite(btn, idx) {
     const block = btn.closest('.compare-block');
+    if (!block) return;
     block.classList.toggle('accepted');
+    block.classList.remove('rejected');
     btn.classList.toggle('active');
-    btn.textContent = block.classList.contains('accepted') ? '✓ 已采纳' : '✅ 采纳';
+    const accepted = block.classList.contains('accepted');
+    btn.textContent = accepted ? '✓ 已采纳' : '✅ 采纳';
     const rejectBtn = block.querySelector('.action-btn.reject');
-    if (block.classList.contains('accepted')) {
-        rejectBtn.classList.remove('active');
-    }
+    if (rejectBtn) rejectBtn.classList.remove('active');
+    // 持久化
+    const state = _loadRewriteState();
+    state[idx] = accepted ? 'accepted' : null;
+    _saveRewriteState(state);
 }
 window.acceptRewrite = acceptRewrite;
 
-/** 不采纳 */
-function rejectRewrite(btn) {
+/** 不采纳（本地持久化） */
+function rejectRewrite(btn, idx) {
     const block = btn.closest('.compare-block');
+    if (!block) return;
     block.classList.toggle('rejected');
+    block.classList.remove('accepted');
     btn.classList.toggle('active');
-    btn.textContent = block.classList.contains('rejected') ? '✓ 已标记' : '❌ 不采纳';
+    const rejected = block.classList.contains('rejected');
+    btn.textContent = rejected ? '✓ 已标记' : '❌ 不采纳';
     const acceptBtn = block.querySelector('.action-btn.accept');
-    if (block.classList.contains('rejected')) {
-        acceptBtn.classList.remove('active');
-    }
+    if (acceptBtn) acceptBtn.classList.remove('active');
+    // 持久化
+    const state = _loadRewriteState();
+    state[idx] = rejected ? 'rejected' : null;
+    _saveRewriteState(state);
 }
 window.rejectRewrite = rejectRewrite;
 
@@ -829,33 +901,59 @@ window.rejectRewrite = rejectRewrite;
  * 从优化建议文本中提取核心内容 + 判断优先级 + 是否需要补充真实信息
  */
 function parseAdviceItem(text, source) {
-    let content = text || '';
-    // 去掉开头的"建议突出："/"建议补充："/"建议优化表达："等前缀
+    // 先用 parseTypeTag 提取 [类型标记]
+    const parsed = parseTypeTag(text);
+    let content = parsed.text || text;
+    let explicitType = parsed.type; // 后端 Prompt 指定的类型
+
+    // 去掉通用前缀（如果 parseTypeTag 没处理掉）
     content = content.replace(/^建议[突出补充优化表达]*[:：]\s*/, '');
     content = content.replace(/^建议优化表达[：:]\s*/, '');
-    content = content.replace(/^建议[补充优化突出]*[：:]\s*/, '');
 
     let priority = '中';
     let needRealInfo = false;
     let sourceLabel = '';
 
-    if (source === 'supplement') {
-        priority = '高';
-        sourceLabel = '需补充';
-        // 判断是否需要真实信息补充
-        const realInfoKeywords = ['学历', '毕业', '学位', '教育背景', '工作经历', '实习', '证书', '语言'];
-        if (realInfoKeywords.some(k => content.includes(k))) {
+    // 如果后端给了明确类型标记，优先使用
+    if (explicitType) {
+        const tag = typeTagStyle(explicitType);
+        if (tag.key === 'expr') {
+            priority = '中';
+            sourceLabel = '表达优化';
+        } else if (tag.key === 'confirm') {
+            priority = '高';
+            sourceLabel = '事实待确认';
+        } else if (tag.key === 'gap') {
+            priority = '高';
+            sourceLabel = '能力缺口';
+        } else if (tag.key === 'info') {
+            priority = '高';
             needRealInfo = true;
+            sourceLabel = '需真实信息';
         }
-    } else if (source === 'expression') {
-        priority = '中';
-        sourceLabel = '表达优化';
     } else {
-        priority = '低';
-        sourceLabel = '突出优势';
+        // 没有显式标记 → 按 source 推断
+        if (source === 'supplement') {
+            priority = '高';
+            sourceLabel = '需补充';
+            const realInfoKeywords = ['学历', '毕业', '学位', '教育背景', '工作经历', '实习', '证书', '语言'];
+            if (realInfoKeywords.some(k => content.includes(k))) {
+                needRealInfo = true;
+            }
+            // 检查是否明确说"学习/实践" → 能力缺口
+            if (/学习|实践|掌握/.test(content)) {
+                sourceLabel = '能力缺口';
+            }
+        } else if (source === 'expression') {
+            priority = '中';
+            sourceLabel = '表达优化';
+        } else {
+            priority = '低';
+            sourceLabel = '突出优势';
+        }
     }
 
-    return { content, priority, needRealInfo, sourceLabel, original: text };
+    return { content, priority, needRealInfo, sourceLabel, original: text, explicitType };
 }
 
 /**

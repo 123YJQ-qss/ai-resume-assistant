@@ -2,6 +2,7 @@
 
 输入：jd_analysis, resume_analysis, resume, knowledge_context
 """
+import datetime as _dt
 import json as _json
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -17,7 +18,13 @@ _REQUIRED_FIELDS = {
 }
 _MATCH_LEVEL_SUB_FIELDS = ["overall", "ability", "experience", "risk"]
 
+# 当前日期注入（用于毕业状态、工作年限等事实推断）
+_TODAY = _dt.date.today()
+_TODAY_STR = _TODAY.strftime("%Y-%m-%d")
+
 _TEMPLATE = """你是简历与岗位匹配度评估专家。请基于以下信息评估候选人与岗位的匹配度。
+
+【当前日期】{today}
 
 【岗位JD分析结果】
 {jd_analysis}
@@ -38,13 +45,36 @@ _TEMPLATE = """你是简历与岗位匹配度评估专家。请基于以下信�
 - 属于推断而非原文证据的内容，必须在句末标注"（推断）"。
 - 简历未体现的 JD 要求技术，归入 weaknesses/gap 并表述为"当前简历未体现该技术实践"，不得写成已有经验。
 
+【日期与事实推断规则 —— 必须严格遵守】
+1. 毕业状态判断：
+   - 简历写"2022.09–2026.06"（预计毕业）+ 当前日期是 {today} → 2026.06 还没到 → 候选人目前是**本科在读**状态，不是已毕业。
+   - 简历写"2022.09–2025.06" + 当前日期 {today} → 2025.06 早于当前日期 → 候选人**已毕业**，不得判断为"尚未毕业"。
+   - 如果简历没写毕业年份/时间段 → 毕业状态标记为"待确认"，禁止擅自判定"未毕业"或"已毕业"。
+2. 工作年限计算：
+   - 用【当前日期】{today} 减去简历中最早的工作/实习起始时间，得到的年限才是实际工作年限。
+   - 简历没写起始时间 → 工作年限标记为"待确认"，不要猜测。
+3. 项目时间推断：
+   - 简历项目时间段的结束时间早于 {today} → 该项目已完成。
+   - 只有"至今/在做"的项目 → 才是进行中。
+4. 无法确认时：
+   - 任何日期、时间、状态，如果简历没有给出足够信息 → 一律标记为"待确认"，禁止无依据地做出负面判断（如"尚未毕业""经验不足"等）。
+
+【weaknesses/不足 分类标注 —— 用于前端区分展示】
+每条 weakness 必须以以下三种标记之一开头：
+- [表达优化]：候选人可能具备相关能力，但简历表述不清晰/不突出，可通过改写直接改善
+- [事实待确认]：JD 要求某项能力，简历没有足够证据，需要候选人确认是否确实做过
+- [能力缺口]：现有资料不能证明具备该技能，可能需要学习或实践补足
+
+【analysis_basis.gap 分类标注】
+每个 gap 条目的 content 也请在开头加上上述 [表达优化]/[事实待确认]/[能力缺口] 标记。
+
 【输出要求】
 请严格返回如下JSON（用 ```json 代码块包裹，不要添加解释文字）：
 {{
   "match_level": {{"overall": "较高/中等/较低", "ability": "较强/中等/较弱", "experience": "较强/中等/较弱", "risk": "需要优化/风险较低/风险较高"}},
   "analysis_basis": [{{"dimension": "维度名", "items": [{{"type": "match或gap", "content": "描述", "quote": "简历原文引用(仅match类型)", "match_degree": "高/中/低"}}]}}],
   "strengths": ["优势：具体描述"],
-  "weaknesses": ["不足：具体描述"]
+  "weaknesses": ["[类型标记]不足：具体描述"]
 }}"""
 
 _prompt = ChatPromptTemplate.from_template(_TEMPLATE)
@@ -104,6 +134,7 @@ chain = _prompt | RunnableLambda(_llm_call) | RunnableLambda(_json_parse) | Runn
 
 def run(jd_analysis, resume_analysis, resume, knowledge_context):
     return chain.invoke({
+        "today": _TODAY_STR,
         "jd_analysis": _dump_dict(jd_analysis),
         "resume_analysis": _dump_dict(resume_analysis),
         "resume": resume,
@@ -113,6 +144,7 @@ def run(jd_analysis, resume_analysis, resume, knowledge_context):
 
 def build_prompt(jd_analysis, resume_analysis, resume, knowledge_context):
     return _prompt.invoke({
+        "today": _TODAY_STR,
         "jd_analysis": _dump_dict(jd_analysis),
         "resume_analysis": _dump_dict(resume_analysis),
         "resume": resume,
