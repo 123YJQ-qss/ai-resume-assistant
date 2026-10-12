@@ -117,6 +117,20 @@ def _norm(s):
     return re.sub(r"\s+", "", str(s or "")).lower()
 
 
+def _all_2grams_in(source_norm, target_norm):
+    """检查 source_norm 的所有 2-gram 是否都在 target_norm 中出现。
+
+    用于容忍词序变化（"大模型训练" vs "训练大模型"）或拆分表达。
+    """
+    if len(source_norm) < 2:
+        return source_norm in target_norm
+    for i in range(len(source_norm) - 1):
+        gram = source_norm[i:i+2]
+        if gram not in target_norm:
+            return False
+    return True
+
+
 def _normalize_tech_term(term):
     """对技术名词做有限别名归一化（仅处理格式差异）。
 
@@ -245,6 +259,12 @@ def check_rewrite_suggestions(opt_result, resume_text, resume_tech=None, jd_term
                 in_resume_original = (t_raw in o_norm) or (t_raw in resume_norm)
                 in_resume_aliased = t_aliased in tech_set_norm
                 if in_resume_original or in_resume_aliased:
+                    continue
+
+                # === 新增：2-gram 容错 ===
+                # 如果 JD 技术词 t_raw 的所有 2-gram 都在 original 或 resume_norm 里出现，
+                # 说明只是词序变了或拆分了表达，不算新增技术词
+                if _all_2grams_in(t_raw, o_norm) or _all_2grams_in(t_raw, resume_norm):
                     continue
 
                 # 命中！但先检查是否是架构词 + original 有架构动作词 → 降级
