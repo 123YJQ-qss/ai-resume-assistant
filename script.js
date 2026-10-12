@@ -826,48 +826,95 @@ function rejectRewrite(btn) {
 window.rejectRewrite = rejectRewrite;
 
 /**
- * 渲染AI优化建议（使用后端返回的 optimization_advice）
+ * 从优化建议文本中提取核心内容 + 判断优先级 + 是否需要补充真实信息
+ */
+function parseAdviceItem(text, source) {
+    let content = text || '';
+    // 去掉开头的"建议突出："/"建议补充："/"建议优化表达："等前缀
+    content = content.replace(/^建议[突出补充优化表达]*[:：]\s*/, '');
+    content = content.replace(/^建议优化表达[：:]\s*/, '');
+    content = content.replace(/^建议[补充优化突出]*[：:]\s*/, '');
+
+    let priority = '中';
+    let needRealInfo = false;
+    let sourceLabel = '';
+
+    if (source === 'supplement') {
+        priority = '高';
+        sourceLabel = '需补充';
+        // 判断是否需要真实信息补充
+        const realInfoKeywords = ['学历', '毕业', '学位', '教育背景', '工作经历', '实习', '证书', '语言'];
+        if (realInfoKeywords.some(k => content.includes(k))) {
+            needRealInfo = true;
+        }
+    } else if (source === 'expression') {
+        priority = '中';
+        sourceLabel = '表达优化';
+    } else {
+        priority = '低';
+        sourceLabel = '突出优势';
+    }
+
+    return { content, priority, needRealInfo, sourceLabel, original: text };
+}
+
+/**
+ * 渲染AI优化建议 → 任务清单
  */
 function renderSuggestions(data) {
     const body = document.getElementById('suggestionsContent');
     if (!body) return;
 
     const advice = data.optimization_advice || {};
+    const all = [];
+
+    (advice.supplement || []).forEach(t => all.push(parseAdviceItem(t, 'supplement')));
+    (advice.expression || []).forEach(t => all.push(parseAdviceItem(t, 'expression')));
+    (advice.highlight || []).forEach(t => all.push(parseAdviceItem(t, 'highlight')));
+
+    if (all.length === 0) {
+        body.innerHTML = '<p class="placeholder-text">暂无优化建议 ✨</p>';
+        return;
+    }
+
+    // 按优先级排序（高→低）
+    const priOrder = { '高': 0, '中': 1, '低': 2 };
+    all.sort((a, b) => priOrder[a.priority] - priOrder[b.priority]);
 
     body.innerHTML = `
-        <div class="ai-suggestions">
-            ${advice.highlight && advice.highlight.length > 0 ? `
-                <div class="suggestion-group">
-                    <h4 class="suggestion-group-title">💡 建议突出哪些经历</h4>
-                    <ul class="suggestion-list">
-                        ${advice.highlight.map(item => `<li>${item}</li>`).join('')}
-                    </ul>
+        <div class="task-list">
+            ${all.map((item, idx) => `
+                <div class="task-item" data-idx="${idx}">
+                    <label class="task-check">
+                        <input type="checkbox" onchange="toggleTask(this)">
+                        <span class="check-box"></span>
+                    </label>
+                    <div class="task-body">
+                        <div class="task-content">${item.content}</div>
+                        <div class="task-tags">
+                            <span class="pri-tag pri-${item.priority === '高' ? 'high' : item.priority === '中' ? 'mid' : 'low'}">
+                                ${item.priority}优先级
+                            </span>
+                            <span class="src-tag src-${item.sourceLabel === '需补充' ? 'supplement' : item.sourceLabel === '表达优化' ? 'expr' : 'highlight'}">
+                                ${item.sourceLabel}
+                            </span>
+                            ${item.needRealInfo ? '<span class="real-tag">需真实信息</span>' : ''}
+                        </div>
+                    </div>
                 </div>
-            ` : ''}
-            ${advice.supplement && advice.supplement.length > 0 ? `
-                <div class="suggestion-group">
-                    <h4 class="suggestion-group-title">📝 建议补充哪些信息</h4>
-                    <ul class="suggestion-list">
-                        ${advice.supplement.map(item => `<li>${item}</li>`).join('')}
-                    </ul>
-                </div>
-            ` : ''}
-            ${advice.expression && advice.expression.length > 0 ? `
-                <div class="suggestion-group">
-                    <h4 class="suggestion-group-title">✨ 建议优化哪些表达</h4>
-                    <ul class="suggestion-list">
-                        ${advice.expression.map(item => `<li>${item}</li>`).join('')}
-                    </ul>
-                </div>
-            ` : ''}
-            ${(!advice.highlight || advice.highlight.length === 0) && 
-              (!advice.supplement || advice.supplement.length === 0) && 
-              (!advice.expression || advice.expression.length === 0) ? `
-                <p style="color: var(--text-secondary); text-align: center; padding: 20px;">暂无优化建议</p>
-            ` : ''}
+            `).join('')}
         </div>
     `;
 }
+
+/** 切换任务完成状态 */
+function toggleTask(cb) {
+    const item = cb.closest('.task-item');
+    if (!item) return;
+    if (cb.checked) item.classList.add('done');
+    else item.classList.remove('done');
+}
+window.toggleTask = toggleTask;
 
 // -------------------- 初始化 --------------------
 
