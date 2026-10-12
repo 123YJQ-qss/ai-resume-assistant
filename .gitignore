@@ -57,3 +57,6 @@ rag_knowledge.py
 backend/_regression_local.py
 backend/_regression_api.py
 backend/_regression_report.json
+
+# eval 运行产物（源码在 backend/eval/*.py）
+backend/eval/eval_report.json
