@@ -87,12 +87,11 @@ def _client_ip(request: Request) -> str:
 
 
 class _SecurityMiddleware(BaseHTTPMiddleware):
-    """限流 + 输入长度限制（只作用于 /api/analyze）。"""
+    """限流（只作用于 /api/analyze）。输入长度检查在 analyze.py 读完 body 后做。"""
 
     async def dispatch(self, request: Request, call_next) -> Response:
         path = request.url.path
 
-        # 只对分析接口做保护
         if path == "/api/analyze" and request.method == "POST":
             ip = _client_ip(request)
             allowed, reason = _check_rate_limit(ip)
@@ -101,15 +100,6 @@ class _SecurityMiddleware(BaseHTTPMiddleware):
                 return JSONResponse(
                     status_code=429,
                     content={"success": False, "error": reason, "data_source": "rate_limit"},
-                )
-
-            # 检查 Content-Length 头（快速拦截）
-            cl = request.headers.get("content-length")
-            if cl and int(cl) > _MAX_INPUT_CHARS * 2:   # JSON 序列化后 ≈ 2x 原文字符
-                _logger.warning(f"event=body_too_large  client={ip}  content_length={cl}")
-                return JSONResponse(
-                    status_code=413,
-                    content={"success": False, "error": f"请求体过大，请缩短简历或岗位JD内容（上限 {_MAX_INPUT_CHARS} 字符）"},
                 )
 
         return await call_next(request)

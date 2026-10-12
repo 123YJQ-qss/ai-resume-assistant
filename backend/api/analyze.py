@@ -1,6 +1,7 @@
 """
 api/analyze.py - POST /api/analyze 接口 + Agent Workflow 编排
 """
+import os
 import re
 
 from fastapi import APIRouter, Request
@@ -555,6 +556,15 @@ async def analyze(request: Request):
         # 参数校验
         if not job_description:
             return JSONResponse(status_code=400, content={"error": "请提供岗位JD描述"})
+
+        # 实际字符数限制（在读完 JSON 后检查，比 Content-Length 头更准确）
+        total_chars = len(job_description) + len(resume_text)
+        MAX_INPUT_CHARS = int(os.getenv("MAX_INPUT_CHARS", "20000"))
+        if total_chars > MAX_INPUT_CHARS:
+            return JSONResponse(
+                status_code=413,
+                content={"error": f"请求体过大，请缩短简历或岗位JD内容（简历+JD 合计上限 {MAX_INPUT_CHARS} 字符，当前 {total_chars}）"},
+            )
 
         valid, reason = validate_jd_quality(job_description)
         if not valid:
