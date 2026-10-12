@@ -2,8 +2,6 @@ fastapi
 uvicorn
 httpx
 langchain-core
-sentence-transformers
-faiss-cpu
 numpy
 python-multipart
 pypdf
