@@ -520,7 +520,7 @@ function renderAnalysisBasis(analysisBasis) {
         const hasGap = gapItems.length > 0;
 
         return `
-        <div class="dimension-block">
+        <div class="dimension-block ${dimIdx === 0 ? 'dim-open' : ''}">
             <div class="dimension-header ${dimIdx === 0 ? 'dim-open' : ''}" data-dim="${dimIdx}">
                 <span class="dimension-arrow">▶</span>
                 <h4 class="dimension-title">${dim.dimension}</h4>
