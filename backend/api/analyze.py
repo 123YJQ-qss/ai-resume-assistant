@@ -408,7 +408,11 @@ def analyze_resume(resume_content, job_description):
     except Exception as e:
         _logger.warning(f"event=workflow_failed  exc_type={type(e).__name__}  "
                         f"exc={str(e)[:200]}  path=fallback_to_single_prompt")
-        return _run_single_prompt(resume_content, job_description)
+        result = _run_single_prompt(resume_content, job_description)
+        # 把原始异常挂上去，便于前端/调用方排查
+        if result.get("data_source") == "mock_fallback":
+            result.setdefault("debug", {})["workflow_error"] = f"{type(e).__name__}: {str(e)[:200]}"
+        return result
 
 
 @router.post("/api/analyze")
