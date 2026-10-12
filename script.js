@@ -395,6 +395,14 @@ function renderAnalysisResult(data, dataSource, warning) {
     // 清空所有静态占位内容，确保动态渲染
     clearResultPage();
 
+    // 重置 Tab 到匹配概览
+    document.querySelectorAll('.result-tab').forEach(t => t.classList.remove('active'));
+    const firstTab = document.querySelector('.result-tab[data-tab="overview"]');
+    if (firstTab) firstTab.classList.add('active');
+    document.querySelectorAll('.result-tab-pane').forEach(p => p.classList.remove('active'));
+    const firstPane = document.getElementById('tab-overview');
+    if (firstPane) firstPane.classList.add('active');
+
     // 显示数据来源标识
     showDataSourceBadge(dataSource, warning);
 
@@ -421,25 +429,17 @@ function renderAnalysisResult(data, dataSource, warning) {
  * 清空结果页面所有容器
  */
 function clearResultPage() {
-    const containers = [
-        '.match-content-verbal',
-        '#analysisBasisContent',
-        '#strengthsList',
-        '#weaknessesList',
-        '#comparisonContent',
-        '#suggestionsContent'
+    const ids = [
+        'analysisBasisContent',
+        'strengthsList',
+        'weaknessesList',
+        'comparisonContent',
+        'suggestionsContent'
     ];
-    
-    containers.forEach(selector => {
-        const el = document.querySelector(selector);
+    ids.forEach(id => {
+        const el = document.getElementById(id);
         if (el) el.innerHTML = '';
     });
-    
-    // 清除通用容器（兜底）
-    const basisBody = document.querySelectorAll('.result-card')[1]?.querySelector('.card-body');
-    if (basisBody && basisBody.id !== 'analysisBasisContent') {
-        // 已经通过ID处理，跳过
-    }
 }
 
 /**
@@ -502,48 +502,66 @@ function renderMatchLevel(matchLevel) {
 }
 
 /**
- * 渲染AI判断依据（按维度分组）
+ * 渲染AI判断依据（按维度分组，可折叠）
  */
 function renderAnalysisBasis(analysisBasis) {
-    const container = document.querySelector('.ai-reason') || 
-                      document.querySelector('.result-card .card-body');
-    if (!container || !analysisBasis || analysisBasis.length === 0) return;
+    const body = document.getElementById('analysisBasisContent');
+    if (!body) return;
 
-    // 找到AI判断依据的card-body
-    const basisCard = document.querySelectorAll('.result-card')[1];
-    const basisBody = basisCard ? basisCard.querySelector('.card-body') : null;
-    if (!basisBody) return;
+    if (!analysisBasis || analysisBasis.length === 0) {
+        body.innerHTML = '<p class="placeholder-text">暂无判断依据</p>';
+        return;
+    }
 
-    basisBody.innerHTML = analysisBasis.map(dimension => `
+    body.innerHTML = analysisBasis.map((dim, dimIdx) => {
+        const matchItems = dim.items.filter(i => i.type === 'match');
+        const gapItems = dim.items.filter(i => i.type === 'gap');
+        const hasMatch = matchItems.length > 0;
+        const hasGap = gapItems.length > 0;
+
+        return `
         <div class="dimension-block">
-            <h4 class="dimension-title">【维度：${dimension.dimension}】</h4>
-            <div class="dimension-items">
-                ${dimension.items.map(item => `
-                    <div class="dimension-item ${item.type === 'match' ? 'match' : 'gap'}">
-                        <span class="dim-icon">${item.type === 'match' ? '✓' : '⚠'}</span>
-                        <span class="dim-label">${item.type === 'match' ? '匹配项：' : '待补充项：'}</span>
-                        <span class="dim-content">${item.content}</span>
-                        ${item.quote ? `<span class="dim-quote">（简历原文："${item.quote}"）</span>` : ''}
-                        <span class="dim-badge ${item.match_degree === '高' ? 'high' : item.match_degree === '中' ? 'medium' : 'low'}">
-                            匹配度：${item.match_degree || '待评估'}
-                        </span>
-                    </div>
-                `).join('')}
+            <div class="dimension-header ${dimIdx === 0 ? 'dim-open' : ''}" data-dim="${dimIdx}">
+                <span class="dimension-arrow">▶</span>
+                <h4 class="dimension-title">${dim.dimension}</h4>
+                <div class="dimension-badges">
+                    ${hasMatch ? `<span class="dim-count match">✓ ${matchItems.length}</span>` : ''}
+                    ${hasGap ? `<span class="dim-count gap">⚠ ${gapItems.length}</span>` : ''}
+                </div>
             </div>
-        </div>
-    `).join('');
+            <div class="dimension-body">
+                ${dim.items.map(item => {
+                    const type = item.type === 'match' ? 'match' : 'gap';
+                    const icon = type === 'match' ? '✓' : '⚠';
+                    const label = type === 'match' ? '匹配' : '待补充';
+                    return `
+                    <div class="dimension-item ${type}">
+                        <div class="dim-row">
+                            <span class="dim-icon">${icon}</span>
+                            <span class="dim-content">${item.content}</span>
+                        </div>
+                        ${item.quote ? `<span class="dim-quote">简历原文："${item.quote}"</span>` : ''}
+                    </div>`;
+                }).join('')}
+            </div>
+        </div>`;
+    }).join('');
+
+    // 绑定折叠点击事件
+    body.querySelectorAll('.dimension-header').forEach(header => {
+        header.addEventListener('click', () => {
+            header.classList.toggle('dim-open');
+            const block = header.parentElement;
+            block.classList.toggle('dim-open');
+        });
+    });
 }
 
 /**
  * 渲染简历优势
  */
 function renderStrengths(strengths) {
-    const cards = document.querySelectorAll('.result-card');
-    const advantageCard = cards[2];
-    if (!advantageCard) return;
-
-    const list = advantageCard.querySelector('.result-list') || 
-                 document.getElementById('strengthsList');
+    const list = document.getElementById('strengthsList');
     if (!list) return;
 
     if (!strengths || strengths.length === 0) {
@@ -551,11 +569,10 @@ function renderStrengths(strengths) {
         return;
     }
 
-    list.innerHTML = strengths.map((item, index) => `
+    list.innerHTML = strengths.map(item => `
         <li class="result-item advantage">
             <span class="item-marker">▸</span>
             <span>${item}</span>
-            <span class="dim-tag">优势${index + 1}</span>
         </li>
     `).join('');
 }
@@ -564,12 +581,7 @@ function renderStrengths(strengths) {
  * 渲染存在不足
  */
 function renderWeaknesses(weaknesses) {
-    const cards = document.querySelectorAll('.result-card');
-    const weaknessCard = cards[3];
-    if (!weaknessCard) return;
-
-    const list = weaknessCard.querySelector('.result-list') ||
-                 document.getElementById('weaknessesList');
+    const list = document.getElementById('weaknessesList');
     if (!list) return;
 
     if (!weaknesses || weaknesses.length === 0) {
@@ -577,11 +589,10 @@ function renderWeaknesses(weaknesses) {
         return;
     }
 
-    list.innerHTML = weaknesses.map((item, index) => `
+    list.innerHTML = weaknesses.map(item => `
         <li class="result-item weakness">
             <span class="item-marker">▸</span>
             <span>${item}</span>
-            <span class="dim-tag">不足${index + 1}</span>
         </li>
     `).join('');
 }
@@ -590,14 +601,9 @@ function renderWeaknesses(weaknesses) {
  * 渲染修改前后对比（使用后端返回的 rewrite_suggestions）
  */
 function renderComparison(data) {
-    const cards = document.querySelectorAll('.result-card');
-    const compareCard = cards[4];
-    if (!compareCard) return;
-
-    const body = compareCard.querySelector('.card-body');
+    const body = document.getElementById('comparisonContent');
     if (!body) return;
 
-    // 使用后端返回的 rewrite_suggestions
     const rewriteSuggestions = data.rewrite_suggestions || [];
 
     if (rewriteSuggestions.length === 0) {
@@ -605,7 +611,7 @@ function renderComparison(data) {
         return;
     }
 
-    body.innerHTML = rewriteSuggestions.map((item, index) => `
+    body.innerHTML = rewriteSuggestions.map(item => `
         <div class="compare-block">
             <div class="compare-grid">
                 <div class="compare-col before">
@@ -636,14 +642,9 @@ function renderComparison(data) {
  * 渲染AI优化建议（使用后端返回的 optimization_advice）
  */
 function renderSuggestions(data) {
-    const cards = document.querySelectorAll('.result-card');
-    const suggestionCard = cards[5];
-    if (!suggestionCard) return;
-
-    const body = suggestionCard.querySelector('.card-body');
+    const body = document.getElementById('suggestionsContent');
     if (!body) return;
 
-    // 使用后端返回的 optimization_advice
     const advice = data.optimization_advice || {};
 
     body.innerHTML = `
@@ -685,4 +686,18 @@ function renderSuggestions(data) {
 
 document.addEventListener('DOMContentLoaded', () => {
     navigateTo('landing');
+
+    // Tab 切换
+    document.querySelectorAll('.result-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            // 切换按钮激活态
+            document.querySelectorAll('.result-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            // 切换面板
+            document.querySelectorAll('.result-tab-pane').forEach(p => p.classList.remove('active'));
+            const pane = document.getElementById('tab-' + tabName);
+            if (pane) pane.classList.add('active');
+        });
+    });
 });
