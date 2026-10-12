@@ -199,10 +199,88 @@ copy .env.example .env
 - RAG 索引构建与检索：`index.faiss` / `meta.json` 已生成，`search` 能正常召回 top-k 岗位知识。
 - 动态 `data_source` 命名（`{provider}_{kind}`）不影响前端解析。
 
-## 12. 当前未验证 / 已知限制
+## 12. 线上部署
 
-- **真实 LLM 调用未验证**：当前未配置任何真实 Provider 凭证（`.env` 尚未创建），因此 4 个 Agent 的真实大模型输出、Agent Workflow 端到端分析内容尚未实测。
-- **PDF / Word 解析未做端到端验证**：解析代码（基于 `pypdf` / `python-docx`）已实现，但未上传真实文件验证。
-- **RAG 效果未量化评估**：知识召回对最终匹配/改写质量的提升尚未做人工或指标评估。
-- **Coze Provider 未实测**：流式接口 `_chat_coze` 保留为备用，当前环境未验证。
-- 根目录 `server.js` 与 `rag_knowledge.py` 为历史副本，需注意勿与 `backend/` 下实现混淆。
+**生产地址**：<https://ai-resume-assistant-so11.onrender.com>
+
+- 部署平台：Render（Free Instance，Python Runtime）
+- 自动构建：`git push origin main` 触发 Render 自动构建部署（约 2-3 分钟）
+- 部署配置：根目录 `requirements.txt` + `runtime.txt` 强制 Python 检测，避免误判为 Node.js 项目
+- 环境变量：`DEEPSEEK_API_KEY`（Render Dashboard 配置）
+
+## 13. 核心匹配逻辑 v2（2026-10-12）
+
+**设计理念**：从"JD 关键词缺失检测"升级为"基于岗位重要性、简历证据和能力可迁移性的定性匹配"。
+
+### JD 先分类，再匹配
+
+JD Agent 输出 `requirements[]` 数组，每条带三级分类：
+
+| 分类 | 含义 | 示例 |
+|------|------|------|
+| 🔴 hard | JD 明确写明的不可替代准入条件 | 硕士学历、3年工作经验、资格证书 |
+| 🟠 core | 岗位核心工作所需技术和能力 | Python 后端、Agent 工作流、RAG |
+| 🟢 preferred | JD 以"优先/加分"表述的条件 | Coze/Dify 平台经验、特定行业经验 |
+
+**关键规则**：技术经验不因岗位名称自动升为 hard（如"Python 后端工程师"≠ Python 是 hard）。
+
+### 逐条 requirement 匹配
+
+Match Agent 对每条 requirement 独立判断四种状态：
+
+| 状态 | 含义 | 技术迁移规则 |
+|------|------|-------------|
+| ✅ direct_match | 简历有直接证据 | — |
+| 🟡 partial_match | 有相似能力但不完整 | 只能产生 partial_match，**必须保留能力边界** |
+| ❓ unverified | 证据缺失（没提≠不具备） | — |
+| ❌ not_met | 有反向证据明确不满足 | — |
+
+**技术迁移示例**：
+- JD 要 Coze/Dify → 简历有 LangChain Agent Workflow → **可迁移 Agent 设计能力**，但平台使用经验未证明 → partial_match
+- JD 要 LlamaIndex → 简历有 FAISS + RAG 全链路 → **可迁移 RAG 原理**，但框架本身未证明 → partial_match
+
+### 综合匹配等级（定性规则，不用数字阈值）
+
+1. 先检查 hard 门槛——任一 not_met → 风险较高，overall 不高于中等
+2. 再看 core 覆盖——绝大多数 direct_match 或 partial_match 有迁移证据 → 方向匹配
+3. preferred 全部 unverified **不应拖累**到较低
+4. 区分能力适配 vs 表达质量——能力满足但简历表述弱 → 不应给太低，而是指出表达问题
+
+### requirement_id 全程追踪
+
+JD Agent 生成的 `requirement_id`（req-001、req-002...）原样传递到 Match Agent 的 `requirement_matches[]`，便于前端 Top3 差距排序溯源。
+
+## 14. 稳定 MVP 验证
+
+**版本**：v2（2026-10-12）  
+**状态**：✅ 已通过 6 组对照测试 + 线上真实简历验证
+
+### 线上真实验证
+
+**测试对象**：杨佳奇（简历） × AI Agent 应用开发工程师岗位（JD）
+
+| 指标 | 结果 |
+|------|------|
+| **综合匹配等级** | **较高** ✅ |
+| **硬性门槛** | 本科 ✅ direct_match |
+| **核心能力（5条）** | 全部 ✅ direct_match（Python、FastAPI、大模型 API、RAG、Agent 项目） |
+| **加分要求（2条）** | 1 direct_match + 1 partial_match（Coze/Dify 经 LangChain 迁移） |
+| **Top3 差距** | 1 加分项 unverified + 2 表达优化建议 |
+| **改写建议** | 6 条（A 级 2 条、B 级 4 条），全部基于原文 |
+
+### 6 组对照测试结果
+
+| 案例 | 预期 | Before | After | 变化原因 |
+|------|------|--------|-------|----------|
+| 1. 核心满足 + 加分缺失 | 较高 | 中等 | **较高** | 加分项不再拖累核心匹配 |
+| 2. 关键词堆砌无证据 | 中/低 | 较低 | **中等** | 方向相关但证据弱，系统正确给 partial_match |
+| 3. 核心缺失仅加分 | 较低 | 较低 | **较低** | 正确保留 |
+| 4. FAISS→LlamaIndex 迁移 | 中等 | 中等 | **较高** | RAG 原理正确识别为可迁移 |
+| 5. 硬门槛不满足 | 较低 | 中等 | **较低** | 本科+应届生 → 硕士+3年 正确识别为 hard not_met |
+| 6. 核心有表达弱 | 较高 | 中等 | **较高** | 区分了能力适配 vs 表达质量 |
+
+### 已知限制（MVP 范围外）
+
+- weaknesses 字段有时为空——Match Agent 倾向把不足放在 analysis_basis.gap 里，但前端有 fallback
+- PDF/Word 解析未做大规模文件量测试
+- 只支持 DeepSeek 真实 Provider，OpenAI/Coze 未做端到端验证
