@@ -168,12 +168,14 @@ def _rewrite_has_substantive_change(original, revised):
 
     返回 False 表示应丢弃这条改写。
 
-    检测规则：
+    检测规则（v2：放宽阈值，让更多实质性改写通过）：
     1. 完全相同 → 丢弃
-    2. revised 长度比 original 长 > 30% 且尾部追加了独立短句（逗号/句号结尾） → 可能是空泛追加
-    3. 字符级差异率（以较长者为基准）< 15% 且涉及措辞升级 → 丢弃
-       （如：熟悉→精通、参与→主导、了解→掌握 等单/双字升级）
-    4. 只有标点/空格微调 → 丢弃
+    2. 只有标点/空格微调（差异率 < 5%） → 丢弃
+    3. 尾部纯追加空泛评价短句（如"体现了优秀能力"） → 丢弃
+    4. 措辞升级 + 有其他实质内容变化 → 保留（交给 evidence_grade 判断安全度）
+    
+    核心原则：evidence_grade 分级已在 prompt 层保证了事实安全，
+    本函数只过滤无意义的改写（完全相同、纯标点、纯空泛追加）。
     """
     if not original or not revised:
         return False
@@ -182,39 +184,17 @@ def _rewrite_has_substantive_change(original, revised):
     if o == r:
         return False
 
-    # 措辞升级词对（原文出现左侧，改写出现右侧 → 无其他实质变化则丢弃）
-    _UPGRADE_PAIRS = [
-        ("熟悉", "精通"), ("掌握", "精通"), ("了解", "精通"),
-        ("参与", "主导"), ("参与", "独立负责"), ("协助", "负责"),
-        ("基础", "丰富"), ("初步", "深入"),
-    ]
-    # 计算实际改动字数
     longer = max(len(o), len(r))
     shorter = min(len(o), len(r))
     if longer == 0:
         return False
 
-    # 先做包含关系检查
-    if r in o or o in r:
-        diff_ratio = (longer - shorter) / longer
-        if diff_ratio < 0.15:
-            # 子串包含 + 差异很小 → 基本相同
-            return False
+    # 规则1：包含关系 + 差异极小（<12%）→ 纯标点/空格微调，丢弃
+    # 1个字符变化在 8 字符里就是 12.5%，所以 0.12 刚好兜住大部分纯标点场景
+    if (r in o or o in r) and (longer - shorter) / longer < 0.12:
+        return False
 
-    # 检查措辞升级类微改动
-    # 统计 revised 中替换了多少词
-    changed_words = 0
-    for left, right in _UPGRADE_PAIRS:
-        if left in o and right in r and right not in o:
-            changed_words += 1
-    # 如果只改了 ≤ 2 个升级词且总差异率 < 25% → 丢弃
-    if changed_words > 0 and changed_words <= 2:
-        # 粗略估计差异率
-        diff_ratio = abs(len(o) - len(r)) / longer
-        if diff_ratio < 0.25:
-            return False
-
-    # 检查是否只在尾部追加了短句
+    # 规则2：尾部纯追加空泛评价短句
     if len(r) > len(o) * 1.3:
         remaining = r.replace(o, "").strip()
         _EMPTY_PHRASES = [
@@ -225,6 +205,7 @@ def _rewrite_has_substantive_change(original, revised):
         if len(remaining) < 20 and any(p in remaining for p in _EMPTY_PHRASES):
             return False
 
+    # 其余情况：保留（让 evidence_grade 来控制事实安全）
     return True
 
 

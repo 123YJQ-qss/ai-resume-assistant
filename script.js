@@ -540,6 +540,36 @@ function typeTagStyle(type) {
 }
 
 /**
+ * 三种类型的 tooltip 说明（悬浮时显示）
+ */
+const TYPE_TOOLTIPS = {
+    'expr':   '你的简历中可能已具备相关经历，但表达不够清晰或不够突出，建议改写后直接优化。',
+    'confirm':'JD 要求某项能力，但简历证据不足，需要你自己确认：是否确实做过相关工作？如果做过，可以补充细节。',
+    'gap':    '现有资料无法证明你具备该技能，可能需要通过学习、新项目或实习来补足。',
+    'info':   '简历中缺失真实信息（如学历、毕业时间、具体成果等），需要你补充。',
+    'other':  ''
+};
+
+/**
+ * 优先级 tooltip
+ */
+const PRIORITY_TOOLTIPS = {
+    '高': '必须优先处理：不解决会直接影响匹配结果或存在明显事实/能力缺失',
+    '中': '建议优化：改善后能提升表达质量或岗位相关性',
+    '低': '锦上添花：可以突出但不必强求，有余力时再做'
+};
+
+const SOURCE_TOOLTIPS = {
+    'supplement':  '简历中缺失的 JD 要求项，需要补充或确认',
+    '表达优化': '已有经历但表达可改善，建议改写',
+    'highlight':   '你的亮点，建议在简历开头或项目中突出展示',
+    '需补充':      '简历中缺失的 JD 要求项，需要补充或确认',
+    '需真实信息':  '简历中缺失真实事实（学历/时间/成果），需要你补充',
+    '能力缺口':    '可能需要学习或实践来补足的技能',
+    '突出优势':    '你的亮点，建议在简历中突出展示'
+};
+
+/**
  * 全局切换 Tab（用于 onclick 跳转）
  */
 function switchTab(tabName) {
@@ -768,23 +798,40 @@ function renderWeaknessesWithFallback(weaknesses, analysisBasis) {
     }
 
     list.innerHTML = finalItems.map(item => {
-        // 提取 [类型] 标签用于图标/高亮
+        // 提取 [类型] 标签用于图标/高亮 + tooltip
         let typeIcon = '▸';
         let extraClass = '';
+        let typeKey = 'other';
+        let displayItem = item;
+        let typeBadge = '';
+
         if (item.startsWith('[表达优化]')) {
             typeIcon = '💬';
             extraClass = ' type-expression';
+            typeKey = 'expr';
+            typeBadge = '<span class="weakness-type-badge" data-tip="' + TYPE_TOOLTIPS['expr'] + '">表达优化 💡</span>';
+            displayItem = item.replace(/^\[表达优化\]\s*/, '');
         } else if (item.startsWith('[事实待确认]')) {
             typeIcon = '❓';
             extraClass = ' type-confirm';
+            typeKey = 'confirm';
+            typeBadge = '<span class="weakness-type-badge" data-tip="' + TYPE_TOOLTIPS['confirm'] + '">事实待确认 ❓</span>';
+            displayItem = item.replace(/^\[事实待确认\]\s*/, '');
         } else if (item.startsWith('[能力缺口]')) {
             typeIcon = '⚠️';
             extraClass = ' type-gap';
+            typeKey = 'gap';
+            typeBadge = '<span class="weakness-type-badge" data-tip="' + TYPE_TOOLTIPS['gap'] + '">能力缺口 ⚠️</span>';
+            displayItem = item.replace(/^\[能力缺口\]\s*/, '');
         }
+
         return `
             <li class="result-item weakness${extraClass}">
                 <span class="item-marker">${typeIcon}</span>
-                <span>${item}</span>
+                <div class="weakness-content">
+                    ${typeBadge}
+                    <span class="weakness-text">${displayItem}</span>
+                </div>
             </li>
         `;
     }).join('');
@@ -1098,7 +1145,14 @@ function renderSuggestions(data) {
 
     body.innerHTML = `
         <div class="task-list">
-            ${all.map((item, idx) => `
+            ${all.map((item, idx) => {
+                const priClass = item.priority === '高' ? 'high' : item.priority === '中' ? 'mid' : 'low';
+                const priTip = PRIORITY_TOOLTIPS[item.priority] || '';
+                const srcMap = { '需补充': 'supplement', '表达优化': 'expr', '需真实信息': 'supplement', '能力缺口': 'supplement' };
+                const srcClass = srcMap[item.sourceLabel] || 'highlight';
+                const srcTip = SOURCE_TOOLTIPS[item.sourceLabel] || '';
+                const realInfoTip = '简历中缺失真实的个人事实（学历/时间/项目成果等），需要你手动补充';
+                return `
                 <div class="task-item" data-idx="${idx}">
                     <label class="task-check">
                         <input type="checkbox" onchange="toggleTask(this)">
@@ -1107,17 +1161,18 @@ function renderSuggestions(data) {
                     <div class="task-body">
                         <div class="task-content">${item.content}</div>
                         <div class="task-tags">
-                            <span class="pri-tag pri-${item.priority === '高' ? 'high' : item.priority === '中' ? 'mid' : 'low'}">
+                            <span class="pri-tag pri-${priClass}" ${priTip ? 'data-tip="' + priTip + '"' : ''}>
                                 ${item.priority}优先级
                             </span>
-                            <span class="src-tag src-${item.sourceLabel === '需补充' ? 'supplement' : item.sourceLabel === '表达优化' ? 'expr' : 'highlight'}">
+                            <span class="src-tag src-${srcClass}" ${srcTip ? 'data-tip="' + srcTip + '"' : ''}>
                                 ${item.sourceLabel}
                             </span>
-                            ${item.needRealInfo ? '<span class="real-tag">需真实信息</span>' : ''}
+                            ${item.needRealInfo ? '<span class="real-tag" data-tip="' + realInfoTip + '">需真实信息</span>' : ''}
                         </div>
                     </div>
                 </div>
-            `).join('')}
+                `;
+            }).join('')}
         </div>
     `;
 }
