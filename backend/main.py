@@ -3,14 +3,16 @@ main.py - AI简历优化助手 FastAPI 入口
 
 统一后端服务：文件上传、PDF/Word 解析、Agent Workflow、RAG 检索、LLM 调用。
 """
+import asyncio
 import os
 import time
 import uuid
+from collections import defaultdict, deque
 from pathlib import Path
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import Response, JSONResponse
 
 BASE_DIR = Path(__file__).resolve().parent          # backend/
 PROJECT_ROOT = BASE_DIR.parent                       # 项目根（含前端与 .env）
@@ -42,41 +44,111 @@ setup_logging()
 _logger = get_logger("main")
 
 
+# ============================================================
+# 安全收尾：限流 / 并发控制 / 输入长度限制
+# 全部基于 Python 标准库实现，不引入新依赖
+# ============================================================
+
+# 限流参数（环境变量可调）
+_RATE_LIMIT_WINDOW_SEC = int(os.getenv("RATE_LIMIT_WINDOW_SEC", "60"))       # 滑动窗口秒数
+_RATE_LIMIT_MAX_REQUESTS = int(os.getenv("RATE_LIMIT_MAX_REQUESTS", "5"))     # 窗口内最大请求数 / IP
+_CONCURRENT_ANALYSIS_MAX = int(os.getenv("CONCURRENT_ANALYSIS_MAX", "2"))      # 同时运行的 AI 分析上限
+_MAX_INPUT_CHARS = int(os.getenv("MAX_INPUT_CHARS", "20000"))                  # 简历 + JD 总字符上限（防止 Token 爆炸）
+
+# 内存限流存储：{ip: deque([timestamp, ...])}
+_rate_limit_store = defaultdict(deque)
+# 并发分析信号量（在 analyze.py 中 acquire/release）
+_analysis_semaphore = asyncio.Semaphore(_CONCURRENT_ANALYSIS_MAX)
+
+
+def _check_rate_limit(client_ip: str) -> tuple[bool, str]:
+    """检查 IP 是否超出限流窗口。返回 (allowed, reason)。"""
+    now = time.time()
+    window = _rate_limit_store[client_ip]
+    # 清除窗口外的旧请求
+    while window and now - window[0] > _RATE_LIMIT_WINDOW_SEC:
+        window.popleft()
+
+    if len(window) >= _RATE_LIMIT_MAX_REQUESTS:
+        oldest = window[0]
+        wait = int(_RATE_LIMIT_WINDOW_SEC - (now - oldest)) + 1
+        return False, f"请求过于频繁，请 {wait} 秒后再试（每分钟最多 {_RATE_LIMIT_MAX_REQUESTS} 次）"
+
+    window.append(now)
+    return True, ""
+
+
+def _client_ip(request: Request) -> str:
+    """获取客户端 IP（兼容 Render/X-Forwarded-For）。"""
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+class _SecurityMiddleware(BaseHTTPMiddleware):
+    """限流 + 输入长度限制（只作用于 /api/analyze）。"""
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        path = request.url.path
+
+        # 只对分析接口做保护
+        if path == "/api/analyze" and request.method == "POST":
+            ip = _client_ip(request)
+            allowed, reason = _check_rate_limit(ip)
+            if not allowed:
+                _logger.warning(f"event=rate_limited  client={ip}  reason={reason}")
+                return JSONResponse(
+                    status_code=429,
+                    content={"success": False, "error": reason, "data_source": "rate_limit"},
+                )
+
+            # 检查 Content-Length 头（快速拦截）
+            cl = request.headers.get("content-length")
+            if cl and int(cl) > _MAX_INPUT_CHARS * 2:   # JSON 序列化后 ≈ 2x 原文字符
+                _logger.warning(f"event=body_too_large  client={ip}  content_length={cl}")
+                return JSONResponse(
+                    status_code=413,
+                    content={"success": False, "error": f"请求体过大，请缩短简历或岗位JD内容（上限 {_MAX_INPUT_CHARS} 字符）"},
+                )
+
+        return await call_next(request)
+
+
+# 导出给 analyze.py 用（不做 import 循环）
+def get_analysis_semaphore() -> asyncio.Semaphore:
+    return _analysis_semaphore
+
+
 class _RequestIdMiddleware(BaseHTTPMiddleware):
     """为每个请求生成或接收 request_id，写入 ContextVar + 响应头 + 日志。"""
 
     HEADER_NAME = "X-Request-ID"
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        # 1) 优先接受客户端传入的 X-Request-ID
         incoming = request.headers.get(self.HEADER_NAME)
         if incoming and incoming.strip():
-            request_id = incoming.strip()[:64]   # 防止过长
+            request_id = incoming.strip()[:64]
         else:
-            # 2) 未提供 → 自动生成（uuid4 hex 前 12 位，去分隔符）
             request_id = uuid.uuid4().hex[:12]
 
-        # 3) 写入 ContextVar（业务代码通过 get_request_id() 可读取）
         set_request_id(request_id)
 
-        # 4) 记录请求开始（不记录 body 内容，脱敏）
         method = request.method
         path = request.url.path
         qs = request.url.query
         qs_part = f"?{qs}" if qs else ""
         _logger.info(
             f"event=request_start  method={method} path={path}{qs_part}  "
-            f"client={request.client.host if request.client else '-'}"
+            f"client={_client_ip(request)}"
         )
         t0 = time.perf_counter()
 
-        # 5) 执行业务
         status_code = 500
         try:
             response = await call_next(request)
             status_code = response.status_code
         except Exception as exc:
-            # 异常路径：记录但必须 re-raise，让 FastAPI 的异常处理器接管
             _logger.error(
                 f"event=request_exception  method={method} path={path}  "
                 f"exc_type={type(exc).__name__}  exc={str(exc)[:200]}",
@@ -84,10 +156,8 @@ class _RequestIdMiddleware(BaseHTTPMiddleware):
             )
             raise
 
-        # 6) 无论成功/失败都在响应头带回 request_id
         response.headers[self.HEADER_NAME] = request_id
 
-        # 7) 记录请求结束
         duration_ms = int((time.perf_counter() - t0) * 1000)
         _logger.info(
             f"event=request_end  method={method} path={path}  "
@@ -99,7 +169,8 @@ class _RequestIdMiddleware(BaseHTTPMiddleware):
 
 app = FastAPI(title="AI Resume Assistant", version="2.0.0")
 
-# ---- 中间件顺序：RequestId 在前（确保 preflight 和异常也能拿到 request_id）----
+# ---- 中间件顺序：安全 > RequestId > CORS ----
+app.add_middleware(_SecurityMiddleware)
 app.add_middleware(_RequestIdMiddleware)
 
 # CORS
@@ -138,20 +209,13 @@ def script_js():
     return FileResponse(PROJECT_ROOT / "script.js")
 
 
-# 健康检查
+# 健康检查（清理后：只保留必要字段）
 @app.get("/api/health")
 def health():
     return {
         "status": "ok",
-        "message": "AI Resume Assistant API is running",
-        "provider": os.getenv("LLM_PROVIDER", "not_set"),
-        "llm_configured": llm_service.is_configured(),
-        "debug": {
-            "DEEPSEEK_API_KEY_present": bool(os.getenv("DEEPSEEK_API_KEY")),
-            "DEEPSEEK_API_KEY_len": len(os.getenv("DEEPSEEK_API_KEY", "")),
-            "LLM_PROVIDER": os.getenv("LLM_PROVIDER"),
-            "MODEL_NAME": os.getenv("MODEL_NAME"),
-        },
+        "service": "AI Resume Assistant",
+        "version": "2.0.0",
     }
 
 

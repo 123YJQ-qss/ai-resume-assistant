@@ -570,7 +570,11 @@ async def analyze(request: Request):
         _logger.info(f"event=request_received  resume_chars={len(resume_text)}  "
                      f"jd_chars={len(job_description)}")
 
-        result = await run_in_threadpool(analyze_resume, resume_text, job_description)
+        # 并发控制：限制同时运行的 AI 分析数量（防止并发消耗过多模型调用）
+        from main import get_analysis_semaphore
+        sem = get_analysis_semaphore()
+        async with sem:
+            result = await run_in_threadpool(analyze_resume, resume_text, job_description)
 
         _logger.info(f"event=request_success  data_source={result.get('data_source')}")
         return {
