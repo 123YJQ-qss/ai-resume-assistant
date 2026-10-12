@@ -309,11 +309,27 @@ AI产品经理岗位：
             </div>
 
             <!-- Tab 导航 -->
-            <div class="result-tabs">
-                <button class="result-tab active" data-tab="overview">📊 匹配概览</button>
-                <button class="result-tab" data-tab="detail">🔍 详细分析</button>
-                <button class="result-tab" data-tab="rewrite">✏️ 改写建议</button>
-                <button class="result-tab" data-tab="advice">💡 优化方向</button>
+            <div class="result-tabs" role="tablist" aria-label="分析结果导航">
+                <button class="result-tab active" data-tab="overview" role="tab" aria-selected="true" aria-controls="tab-overview">
+                    <span class="tab-icon">📊</span>
+                    <span class="tab-label">匹配概览</span>
+                    <span class="tab-step">了解结果</span>
+                </button>
+                <button class="result-tab" data-tab="detail" role="tab" aria-selected="false" aria-controls="tab-detail">
+                    <span class="tab-icon">🔍</span>
+                    <span class="tab-label">详细分析</span>
+                    <span class="tab-step">查看原因</span>
+                </button>
+                <button class="result-tab" data-tab="rewrite" role="tab" aria-selected="false" aria-controls="tab-rewrite">
+                    <span class="tab-icon">✏️</span>
+                    <span class="tab-label">改写建议</span>
+                    <span class="tab-step">修改内容</span>
+                </button>
+                <button class="result-tab" data-tab="advice" role="tab" aria-selected="false" aria-controls="tab-advice">
+                    <span class="tab-icon">💡</span>
+                    <span class="tab-label">优化方向</span>
+                    <span class="tab-step">后续行动</span>
+                </button>
             </div>
 
             <!-- Tab 内容 -->

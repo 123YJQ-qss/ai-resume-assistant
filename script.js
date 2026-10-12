@@ -418,11 +418,11 @@ function renderAnalysisResult(data, dataSource, warning) {
     // 2. 渲染AI判断依据
     renderAnalysisBasis(data.analysis_basis);
     
-    // 3. 渲染简历优势
+    // 3. 渲染简历优势（控制在 3-5 项，可展开）
     renderStrengths(data.strengths);
     
-    // 4. 渲染存在不足
-    renderWeaknesses(data.weaknesses);
+    // 4. 渲染存在不足（优先 weaknesses，空则从 analysis_basis.gap 提取）
+    renderWeaknessesWithFallback(data.weaknesses, data.analysis_basis);
     
     // 5. 渲染修改前后对比（基于 rewrite_suggestions）
     renderComparison(data);
@@ -543,9 +543,16 @@ function typeTagStyle(type) {
  * 全局切换 Tab（用于 onclick 跳转）
  */
 function switchTab(tabName) {
-    document.querySelectorAll('.result-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.result-tab').forEach(t => {
+        t.classList.remove('active');
+        t.setAttribute('aria-selected', 'false');
+    });
     const tab = document.querySelector('.result-tab[data-tab="' + tabName + '"]');
-    if (tab) tab.classList.add('active');
+    if (tab) {
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        tab.focus();  // 键盘可访问性：激活后聚焦
+    }
     document.querySelectorAll('.result-tab-pane').forEach(p => p.classList.remove('active'));
     const pane = document.getElementById('tab-' + tabName);
     if (pane) {
@@ -669,36 +676,185 @@ function renderStrengths(strengths) {
     if (!list) return;
 
     if (!strengths || strengths.length === 0) {
-        list.innerHTML = '<li class="placeholder-text">暂无数据</li>';
+        list.innerHTML = '<li class="placeholder-text">当前未识别出明显优势</li>';
         return;
     }
 
-    list.innerHTML = strengths.map(item => `
+    const MAX_VISIBLE = 5;
+    const hasMore = strengths.length > MAX_VISIBLE;
+    const visible = strengths.slice(0, MAX_VISIBLE);
+    const hidden = strengths.slice(MAX_VISIBLE);
+
+    let html = visible.map(item => `
         <li class="result-item advantage">
             <span class="item-marker">▸</span>
             <span>${item}</span>
         </li>
     `).join('');
+
+    if (hasMore) {
+        html += `<li class="expand-toggle" data-expand="strengths">
+            <span class="expand-text">还有 ${hidden.length} 条优势，点击展开</span>
+            <span class="expand-arrow">▼</span>
+        </li>`;
+        html += `<li class="hidden-items" style="display:none">${hidden.map(item => `
+            <li class="result-item advantage">
+                <span class="item-marker">▸</span>
+                <span>${item}</span>
+            </li>
+        `).join('')}</li>`;
+    }
+
+    list.innerHTML = html;
+
+    // 绑定展开按钮
+    const toggle = list.querySelector('[data-expand="strengths"]');
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            const hidden = toggle.nextElementSibling;
+            const isHidden = hidden.style.display === 'none';
+            hidden.style.display = isHidden ? '' : 'none';
+            toggle.querySelector('.expand-arrow').textContent = isHidden ? '▲' : '▼';
+            toggle.querySelector('.expand-text').textContent = isHidden
+                ? '收起'
+                : `还有 ${hidden.length - 1} 条优势，点击展开`;
+        });
+    }
 }
 
 /**
- * 渲染存在不足
+ * 渲染存在不足（带 fallback：weaknesses 空则从 analysis_basis.gap 提取）
+ * 
+ * 提取策略：
+ *   1. 从 analysis_basis 所有维度的 items 中提取 type="gap" 的 content
+ *   2. 保留原始 [类型] 标签作为事实来源（如 [能力缺口]、[事实待确认]、[表达优化]）
+ *   3. 按 match_degree="低" 优先（越严重的差距越靠前）
+ *   4. 去除重复（content 高度相似则合并）
+ *   5. 控制在 5 项以内，可展开
  */
-function renderWeaknesses(weaknesses) {
+function renderWeaknessesWithFallback(weaknesses, analysisBasis) {
     const list = document.getElementById('weaknessesList');
     if (!list) return;
 
-    if (!weaknesses || weaknesses.length === 0) {
-        list.innerHTML = '<li class="placeholder-text">暂无数据</li>';
+    let finalItems = [];
+    let source = '';  // 调试用：记录数据来源
+
+    // 优先使用后端直接返回的 weaknesses
+    if (weaknesses && weaknesses.length > 0) {
+        finalItems = [...weaknesses];
+        source = 'weaknesses[]';
+    } else if (analysisBasis && analysisBasis.length > 0) {
+        // Fallback: 从 analysis_basis 提取 gap
+        const gapItems = [];
+        for (const dim of analysisBasis) {
+            for (const item of (dim.items || [])) {
+                if (item.type === 'gap' && item.content) {
+                    gapItems.push(item);
+                }
+            }
+        }
+
+        if (gapItems.length > 0) {
+            // 按 match_degree 排序：低 > 中 > 高（低的优先级最高）
+            const degreeRank = { '低': 0, '中': 1, '高': 2 };
+            gapItems.sort((a, b) => {
+                return (degreeRank[a.match_degree] ?? 9) - (degreeRank[b.match_degree] ?? 9);
+            });
+
+            // 去重：content 完全相同或高度相似
+            const seen = new Set();
+            const deduped = [];
+            for (const item of gapItems) {
+                // 归一化后比较（去空白、去标点）
+                const key = item.content.replace(/[\s，。、]/g, '');
+                // 检查是否已有高度相似的
+                let isDup = false;
+                for (const existingKey of seen) {
+                    // 如果存在子串包含或重叠度 > 70% → 视为重复
+                    if (key.includes(existingKey) || existingKey.includes(key)) {
+                        const shorter = key.length < existingKey.length ? key : existingKey;
+                        const longer = key.length >= existingKey.length ? key : existingKey;
+                        const overlap = [...shorter].filter(c => longer.includes(c)).length;
+                        if (overlap / shorter.length > 0.7) {
+                            isDup = true;
+                            break;
+                        }
+                    }
+                }
+                if (!isDup) {
+                    seen.add(key);
+                    deduped.push(item.content);
+                }
+            }
+            finalItems = deduped;
+            source = 'analysis_basis.gap (fallback)';
+        }
+    }
+
+    // 渲染
+    if (!finalItems || finalItems.length === 0) {
+        list.innerHTML = '<li class="placeholder-text">当前未识别出明显不足</li>';
         return;
     }
 
-    list.innerHTML = weaknesses.map(item => `
-        <li class="result-item weakness">
-            <span class="item-marker">▸</span>
-            <span>${item}</span>
-        </li>
-    `).join('');
+    const MAX_VISIBLE = 5;
+    const hasMore = finalItems.length > MAX_VISIBLE;
+    const visible = finalItems.slice(0, MAX_VISIBLE);
+    const hidden = finalItems.slice(MAX_VISIBLE);
+
+    let html = visible.map(item => {
+        // 提取 [类型] 标签用于图标/高亮
+        let typeIcon = '▸';
+        let extraClass = '';
+        if (item.startsWith('[表达优化]')) {
+            typeIcon = '💬';
+            extraClass = ' type-expression';
+        } else if (item.startsWith('[事实待确认]')) {
+            typeIcon = '❓';
+            extraClass = ' type-confirm';
+        } else if (item.startsWith('[能力缺口]')) {
+            typeIcon = '⚠️';
+            extraClass = ' type-gap';
+        }
+        return `
+            <li class="result-item weakness${extraClass}">
+                <span class="item-marker">${typeIcon}</span>
+                <span>${item}</span>
+            </li>
+        `;
+    }).join('');
+
+    if (hasMore) {
+        html += `<li class="expand-toggle" data-expand="weaknesses">
+            <span class="expand-text">还有 ${hidden.length} 条不足，点击展开</span>
+            <span class="expand-arrow">▼</span>
+        </li>`;
+        html += `<li class="hidden-items" style="display:none">${hidden.map(item => `
+            <li class="result-item weakness">
+                <span class="item-marker">▸</span>
+                <span>${item}</span>
+            </li>
+        `).join('')}</li>`;
+    }
+
+    list.innerHTML = html;
+
+    // 绑定展开按钮
+    const toggle = list.querySelector('[data-expand="weaknesses"]');
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            const hidden = toggle.nextElementSibling;
+            const isHidden = hidden.style.display === 'none';
+            hidden.style.display = isHidden ? '' : 'none';
+            toggle.querySelector('.expand-arrow').textContent = isHidden ? '▲' : '▼';
+            toggle.querySelector('.expand-text').textContent = isHidden
+                ? '收起'
+                : `还有 ${hidden.length - 1} 条不足，点击展开`;
+        });
+    }
+
+    // 控制台输出数据来源（方便调试）
+    console.log(`[debug] renderWeaknessesWithFallback: 来源=${source}, 共 ${finalItems.length} 项`);
 }
 
 /**
