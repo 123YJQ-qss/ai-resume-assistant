@@ -681,57 +681,24 @@ function renderStrengths(strengths) {
         return;
     }
 
-    const MAX_VISIBLE = 5;
-    const hasMore = strengths.length > MAX_VISIBLE;
-    const visible = strengths.slice(0, MAX_VISIBLE);
-    const hidden = strengths.slice(MAX_VISIBLE);
-
-    let html = visible.map(item => `
+    list.innerHTML = strengths.map(item => `
         <li class="result-item advantage">
             <span class="item-marker">▸</span>
             <span>${item}</span>
         </li>
     `).join('');
-
-    if (hasMore) {
-        html += `<li class="expand-toggle" data-expand="strengths">
-            <span class="expand-text">还有 ${hidden.length} 条优势，点击展开</span>
-            <span class="expand-arrow">▼</span>
-        </li>`;
-        html += `<li class="hidden-items" style="display:none">${hidden.map(item => `
-            <li class="result-item advantage">
-                <span class="item-marker">▸</span>
-                <span>${item}</span>
-            </li>
-        `).join('')}</li>`;
-    }
-
-    list.innerHTML = html;
-
-    // 绑定展开按钮
-    const toggle = list.querySelector('[data-expand="strengths"]');
-    if (toggle) {
-        toggle.addEventListener('click', () => {
-            const hidden = toggle.nextElementSibling;
-            const isHidden = hidden.style.display === 'none';
-            hidden.style.display = isHidden ? '' : 'none';
-            toggle.querySelector('.expand-arrow').textContent = isHidden ? '▲' : '▼';
-            toggle.querySelector('.expand-text').textContent = isHidden
-                ? '收起'
-                : `还有 ${hidden.length - 1} 条优势，点击展开`;
-        });
-    }
 }
 
 /**
  * 渲染存在不足（带 fallback：weaknesses 空则从 analysis_basis.gap 提取）
  * 
  * 提取策略：
- *   1. 从 analysis_basis 所有维度的 items 中提取 type="gap" 的 content
+ *   1. 从 analysis_basis 所有维度的 items 中提取 type !== 'match' 的 content
+ *      （兜底：LLM 偶尔返回非标准 type 值如 "风险"/"不足"/带空格的 "gap "）
  *   2. 保留原始 [类型] 标签作为事实来源（如 [能力缺口]、[事实待确认]、[表达优化]）
  *   3. 按 match_degree="低" 优先（越严重的差距越靠前）
  *   4. 去除重复（content 高度相似则合并）
- *   5. 控制在 5 项以内，可展开
+ *   5. 全部展示（数据量小，无需展开收起）
  */
 function renderWeaknessesWithFallback(weaknesses, analysisBasis) {
     const list = document.getElementById('weaknessesList');
@@ -794,18 +761,13 @@ function renderWeaknessesWithFallback(weaknesses, analysisBasis) {
         }
     }
 
-    // 渲染
+    // 渲染（全部显示，不截断）
     if (!finalItems || finalItems.length === 0) {
         list.innerHTML = '<li class="placeholder-text">当前未识别出明显不足</li>';
         return;
     }
 
-    const MAX_VISIBLE = 5;
-    const hasMore = finalItems.length > MAX_VISIBLE;
-    const visible = finalItems.slice(0, MAX_VISIBLE);
-    const hidden = finalItems.slice(MAX_VISIBLE);
-
-    let html = visible.map(item => {
+    list.innerHTML = finalItems.map(item => {
         // 提取 [类型] 标签用于图标/高亮
         let typeIcon = '▸';
         let extraClass = '';
@@ -826,35 +788,6 @@ function renderWeaknessesWithFallback(weaknesses, analysisBasis) {
             </li>
         `;
     }).join('');
-
-    if (hasMore) {
-        html += `<li class="expand-toggle" data-expand="weaknesses">
-            <span class="expand-text">还有 ${hidden.length} 条不足，点击展开</span>
-            <span class="expand-arrow">▼</span>
-        </li>`;
-        html += `<li class="hidden-items" style="display:none">${hidden.map(item => `
-            <li class="result-item weakness">
-                <span class="item-marker">▸</span>
-                <span>${item}</span>
-            </li>
-        `).join('')}</li>`;
-    }
-
-    list.innerHTML = html;
-
-    // 绑定展开按钮
-    const toggle = list.querySelector('[data-expand="weaknesses"]');
-    if (toggle) {
-        toggle.addEventListener('click', () => {
-            const hidden = toggle.nextElementSibling;
-            const isHidden = hidden.style.display === 'none';
-            hidden.style.display = isHidden ? '' : 'none';
-            toggle.querySelector('.expand-arrow').textContent = isHidden ? '▲' : '▼';
-            toggle.querySelector('.expand-text').textContent = isHidden
-                ? '收起'
-                : `还有 ${hidden.length - 1} 条不足，点击展开`;
-        });
-    }
 
     // 控制台输出数据来源（方便调试）
     console.log(`[debug] renderWeaknessesWithFallback: 来源=${source}, 共 ${finalItems.length} 项`);
