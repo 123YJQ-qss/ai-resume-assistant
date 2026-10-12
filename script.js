@@ -667,45 +667,163 @@ function renderWeaknesses(weaknesses) {
 }
 
 /**
- * 渲染修改前后对比（使用后端返回的 rewrite_suggestions）
+ * 简易字符级 Diff：返回 {text, type: 'keep'|'del'|'add'} 数组
+ * 基于 LCS（最长公共子序列）
+ */
+function diffChars(orig, rev) {
+    if (!orig) return rev ? [{ text: rev, type: 'add' }] : [];
+    if (!rev) return [{ text: orig, type: 'del' }];
+
+    const m = orig.length, n = rev.length;
+    // 构建 LCS 矩阵
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+            if (orig[i - 1] === rev[j - 1]) dp[i][j] = dp[i - 1][j - 1] + 1;
+            else dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+    }
+    // 回溯
+    const result = [];
+    let i = m, j = n;
+    while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && orig[i - 1] === rev[j - 1]) {
+            result.unshift({ text: orig[i - 1], type: 'keep' });
+            i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+            result.unshift({ text: rev[j - 1], type: 'add' });
+            j--;
+        } else {
+            result.unshift({ text: orig[i - 1], type: 'del' });
+            i--;
+        }
+    }
+    // 合并连续同类型
+    const merged = [];
+    for (const seg of result) {
+        const last = merged[merged.length - 1];
+        if (last && last.type === seg.type) last.text += seg.text;
+        else merged.push({ ...seg });
+    }
+    return merged;
+}
+
+/**
+ * 渲染修改前后对比（带 Diff + 操作按钮）
  */
 function renderComparison(data) {
     const body = document.getElementById('comparisonContent');
     if (!body) return;
 
-    const rewriteSuggestions = data.rewrite_suggestions || [];
+    const suggestions = data.rewrite_suggestions || [];
 
-    if (rewriteSuggestions.length === 0) {
-        body.innerHTML = '<p style="color: var(--text-secondary); text-align: center; padding: 20px;">暂无改写建议</p>';
+    if (suggestions.length === 0) {
+        body.innerHTML = '<p class="placeholder-text">暂无改写建议</p>';
         return;
     }
 
-    body.innerHTML = rewriteSuggestions.map(item => `
-        <div class="compare-block">
+    body.innerHTML = suggestions.map((item, idx) => {
+        const diff = diffChars(item.original || '', item.revised || '');
+        const gradeBadge = item.evidence_grade
+            ? `<span class="evidence-grade grade-${item.evidence_grade}">证据等级 ${item.evidence_grade}</span>`
+            : '';
+        const basisId = 'basis-' + idx;
+
+        return `
+        <div class="compare-block" data-idx="${idx}">
+            <div class="compare-block-header">
+                <span class="compare-index">#${idx + 1}</span>
+                ${gradeBadge}
+            </div>
             <div class="compare-grid">
                 <div class="compare-col before">
-                    <div class="compare-label">修改前</div>
-                    <div class="compare-content">
-                        <p>${item.original || '原文'}</p>
+                    <div class="compare-label">原文</div>
+                    <div class="compare-content diff-original">
+                        ${diff.filter(s => s.type !== 'add').map(s =>
+                            s.type === 'del'
+                                ? `<span class="diff-del">${s.text}</span>`
+                                : `<span class="diff-keep">${s.text}</span>`
+                        ).join('') || '<em class="diff-empty">（空）</em>'}
                     </div>
                 </div>
-                <div class="compare-arrow">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                        <polyline points="12 5 19 12 12 19"/>
-                    </svg>
-                </div>
+                <div class="compare-arrow">→</div>
                 <div class="compare-col after">
-                    <div class="compare-label">修改后</div>
-                    <div class="compare-content">
-                        <p>${item.revised || '建议改写'}</p>
+                    <div class="compare-label">AI 改写</div>
+                    <div class="compare-content diff-revised">
+                        ${diff.filter(s => s.type !== 'del').map(s =>
+                            s.type === 'add'
+                                ? `<span class="diff-add">${s.text}</span>`
+                                : `<span class="diff-keep">${s.text}</span>`
+                        ).join('') || '<em class="diff-empty">（空）</em>'}
                     </div>
                 </div>
             </div>
-            ${item.basis ? `<p class="compare-reason">改写依据：${item.basis}</p>` : ''}
-        </div>
-    `).join('');
+            ${item.basis ? `
+                <button class="basis-toggle" onclick="toggleBasis('${basisId}', this)">
+                    <span>▼</span> 修改依据
+                </button>
+                <div class="compare-reason" id="${basisId}" style="display:none">${item.basis}</div>
+            ` : ''}
+            <div class="compare-actions">
+                <button class="action-btn copy" onclick="copyRewrite(this, ${idx})">📋 复制改写</button>
+                <button class="action-btn accept" onclick="acceptRewrite(this, ${idx})">✅ 采纳</button>
+                <button class="action-btn reject" onclick="rejectRewrite(this, ${idx})">❌ 不采纳</button>
+            </div>
+        </div>`;
+    }).join('');
+
+    // 保存 rewrite 数据供 copy 使用
+    window._rewriteSuggestions = suggestions;
 }
+
+/** 折叠/展开修改依据 */
+function toggleBasis(id, btn) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const hidden = el.style.display === 'none';
+    el.style.display = hidden ? 'block' : 'none';
+    btn.querySelector('span').textContent = hidden ? '▲' : '▼';
+}
+window.toggleBasis = toggleBasis;
+
+/** 复制改写文本 */
+function copyRewrite(btn, idx) {
+    const item = window._rewriteSuggestions && window._rewriteSuggestions[idx];
+    if (!item) return;
+    navigator.clipboard.writeText(item.revised || '').then(() => {
+        const orig = btn.textContent;
+        btn.textContent = '✓ 已复制';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 1500);
+    });
+}
+window.copyRewrite = copyRewrite;
+
+/** 采纳改写 */
+function acceptRewrite(btn) {
+    const block = btn.closest('.compare-block');
+    block.classList.toggle('accepted');
+    btn.classList.toggle('active');
+    btn.textContent = block.classList.contains('accepted') ? '✓ 已采纳' : '✅ 采纳';
+    const rejectBtn = block.querySelector('.action-btn.reject');
+    if (block.classList.contains('accepted')) {
+        rejectBtn.classList.remove('active');
+    }
+}
+window.acceptRewrite = acceptRewrite;
+
+/** 不采纳 */
+function rejectRewrite(btn) {
+    const block = btn.closest('.compare-block');
+    block.classList.toggle('rejected');
+    btn.classList.toggle('active');
+    btn.textContent = block.classList.contains('rejected') ? '✓ 已标记' : '❌ 不采纳';
+    const acceptBtn = block.querySelector('.action-btn.accept');
+    if (block.classList.contains('rejected')) {
+        acceptBtn.classList.remove('active');
+    }
+}
+window.rejectRewrite = rejectRewrite;
 
 /**
  * 渲染AI优化建议（使用后端返回的 optimization_advice）
