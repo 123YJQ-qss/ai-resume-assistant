@@ -1,36 +1,107 @@
-"""fact_check 语义级回归测试
+"""fact_check 语义级回归测试 v2 —— 要求核对拦截原因
 
-用户明确指出：单字 multiset 只检查字符重合，无法识别动作主体、职责程度、
-技术与动作关系、数字成果等事实关系变化。
+相比 v1 的改进：
+  - 每个用例带 expect_reason 关键词（如 "疑似措辞升级" / "疑似新增数字指标"）
+  - flagged 符合预期但原因不匹配 → PARTIAL_PASS（拦截了但原因不对，不算完整识别）
+  - 明确区分：
+      FULL_PASS     — flagged 和原因都匹配（完整语义识别）
+      PARTIAL_PASS  — flagged 符合但原因关键词不匹配（碰巧拦截）
+      FAIL          — flagged 不符合预期（该拦没拦 / 不该拦却拦）
 
-本模块以反例驱动，测试 fact_check 是否会漏掉以下类型的虚构改写：
+拦截原因关键词（来自 fact_check.py L302-330）：
+  "疑似新增技术"        — 技术词不在 original 也不在简历
+  "疑似新增数字指标"    — 数字不在 original
+  "疑似新增量化表述"    — QUALITATIVE_METRIC_WORDS 不在 original
+  "疑似措辞升级"        — UPGRADE_WORDS 命中
+  "疑似未经证实的项目级描述" — PROJECT_LEVEL_WORDS 命中
+  "架构能力表述升级"    — 架构词命中但有动作词，降级
 
-  1. 动作主体变化："张三负责" → "团队负责"（主体变了但 char 仍有重合）
-  2. 职责程度升级："参与设计" → "主导设计"（程度升级，但"设计"两字在原文）
-  3. 技术+任务绑定变化："用 FastAPI 写接口" → "用 FastAPI 训练大模型"
-     （FastAPI 在原文，所以 multiset 说"可以"，但训练大模型是假的）
-  4. 数字成果新增：原文无数字 → revised 加了"5000 次调用"
-  5. 技能升级："了解 X" → "精通 X"
-
-这些测试的目的不是证明当前 fact_check 都能挡住——而是**准确标记哪些类型
-还挡不住**，作为后续增强的明确目标。
-
-用法：python backend/eval/fact_check_tests.py
+用法：python backend/eval/fact_check_semantic_tests.py
 """
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from services.fact_check import check_rewrite_suggestions, _norm, _all_2grams_in
+from services.fact_check import check_rewrite_suggestions
 
 
-# ============ 事实关系测试 ============
+# ===================== 测试矩阵 =====================
+#
+# 每个条目：(name, original, revised, expect_flagged, expect_reason, jd_terms)
+#
+# expect_reason 是 fact_warning 子串，空字符串"" 表示「不检查原因，只看 flagged」
+# 多个原因用 "|" 分隔（任一匹配即可）
+# jd_terms: 模拟真实 JD 里的技术词列表，fact_check 第 3 步新增技术检测以此为候选集
+CASES = [
+    # ============ fact_check 主流程测试 ============
 
-def run_all():
-    results = []
+    # 1. 职责程度升级（参与→主导）—— 应该被措辞升级拦截
+    ("职责升级：参与→主导",
+     "参与 AI 简历优化系统开发",
+     "主导 AI 简历优化系统开发",
+     True, "疑似措辞升级", []),
 
-    # --- 测试 fact_check 主流程能否检测到 ---
-    def _test_check(name, original, revised, expect_flagged, resume_text=None, jd_terms=None):
-        """expect_flagged=True 表示期望 fact_check 检出违规"""
+    # 2. 动作主体变化（张三→团队）—— fact_check 不应因业务词拦
+    ("动作主体变化：张三→团队（fact_check 不应因业务词拦）",
+     "张三负责后端接口设计",
+     "团队负责后端接口设计",
+     False, "", []),
+
+    # 3. 技术+任务绑定变化（FastAPI 写接口→训练大模型）
+    #    给 jd_terms 加 "大模型" 模拟真实场景（JD 要求大模型能力）
+    ("技术+任务绑定变化（FastAPI 开发→训练大模型）",
+     "用 FastAPI 开发任务管理接口",
+     "用 FastAPI 训练大模型",
+     True, "疑似新增技术", ["大模型", "fastapi", "训练"]),
+
+    # 4. 新增数字成果
+    ("新增数字成果",
+     "训练大模型",
+     "训练大模型，累计服务用户 5000+ 人次",
+     True, "疑似新增数字指标", []),
+
+    # 5. 升级技术级别（了解→精通）
+    ("技能升级：了解→精通",
+     "了解 LangChain",
+     "精通 LangChain",
+     True, "疑似措辞升级", []),
+
+    # 6. 项目级包装
+    ("项目级包装：生产级",
+     "做了一个简历系统",
+     "做了一个生产级简历系统",
+     True, "疑似未经证实", []),
+
+    # ============ _all_2grams_in 容错边界 ============
+
+    # 7. 拉丁词完整包含（JD 词 "fastapi" 在 original 里完整出现）
+    #    → _all_2grams_in 应该返回 True → fact_check 不应因 "fastapi" 拦
+    ("拉丁词完整包含不应拦（original 已有 fastapi）",
+     "用 FastAPI 开发接口",
+     "用 FastAPI 开发 RESTful 接口",
+     False, "", ["fastapi"]),
+
+    # 8. 散落单字不应通过容错（JD 词 "大语言模型" 不应因散落单字被容忍）
+    #    original 有"大模型"但没有"语言模型" → "大语言模型"是新增完整技术
+    ("散落单字不应容忍新增完整技术",
+     "用大模型做训练",
+     "用大语言模型做训练",
+     True, "疑似新增技术", ["大语言模型"]),
+
+    # 9. 词序反转应该容错（训练大模型 ↔ 大模型训练）
+    #    JD 词 "训练大模型" 和 original 里的 "训练大模型" 只是词序反
+    ("词序反转应通过容错（训练大模型 ↔ 大模型训练）",
+     "训练大模型",
+     "用大模型做训练",
+     False, "", ["训练大模型"]),
+]
+
+
+# ===================== 执行 =====================
+
+def run():
+    results = []  # (name, result, flagged, fact_warning)
+
+    for name, original, revised, expect_flagged, expect_reason, jd_terms in CASES:
         opt = {
             "rewrite_suggestions": [{
                 "original": original,
@@ -39,121 +110,80 @@ def run_all():
                 "evidence_grade": "B",
             }]
         }
-        resume = resume_text or original
-        jd = jd_terms or []
+        resume_text = original  # 简化：简历原文就是 original
+
         result, summary = check_rewrite_suggestions(
-            opt, resume,
-            resume_tech=[],  # 简化
-            jd_terms=jd,
+            opt, resume_text,
+            resume_tech=[],
+            jd_terms=jd_terms,
         )
         flagged = summary["flagged"]
-        ok = (flagged > 0) == expect_flagged
-        results.append(("fact_check", name, ok, flagged, summary))
-        return ok
 
-    # --- 测试 _all_2grams_in 在不同语义场景下的表现 ---
-    def _test_2gram(name, source, target, expect):
-        got = _all_2grams_in(source, _norm(target))
-        ok = got == expect
-        results.append(("2gram", name, ok, got, None))
-        return ok
+        # 提取 fact_warning
+        fact_warning = ""
+        for sug in result.get("rewrite_suggestions", []):
+            if sug.get("fact_warning"):
+                fact_warning = sug["fact_warning"]
+                break
 
-    # ============== fact_check 主流程测试 ==============
+        # 判定
+        result_label = ""
+        if expect_flagged and flagged == 0:
+            result_label = "FAIL"
+        elif not expect_flagged and flagged > 0:
+            result_label = "FAIL"
+        else:
+            # flagged 符合预期 → 检查原因
+            if expect_reason:
+                reason_ok = any(r in fact_warning for r in expect_reason.split("|"))
+                if reason_ok:
+                    result_label = "FULL_PASS"
+                else:
+                    result_label = "PARTIAL_PASS"
+            else:
+                result_label = "PASS"
 
-    # 案例 1：职责程度升级（参与→主导）—— fact_check 应该能挡住（有 UPGRADE_WORDS）
-    _test_check("职责升级：参与→主导",
-                original="参与 AI 简历优化系统开发",
-                revised="主导 AI 简历优化系统开发",
-                expect_flagged=True)
-
-    # 案例 2：动作主体变化（张三→团队）—— fact_check 现有能力可能挡不住
-    _test_check("动作主体变化：张三→团队",
-                original="张三负责后端接口设计",
-                revised="团队负责后端接口设计",
-                expect_flagged=False)  # 标记=False 说明这是已知盲区
-
-    # 案例 3：技术+任务绑定变化（FastAPI 写接口→训练大模型）
-    # original 有 FastAPI，所以 multiset 说"可以"，但任务变了
-    _test_check("技术+任务绑定变化",
-                original="用 FastAPI 开发任务管理接口",
-                revised="用 FastAPI 训练大模型",
-                expect_flagged=False)
-
-    # 案例 4：新增数字成果
-    _test_check("新增数字成果",
-                original="训练大模型",
-                revised="训练大模型，累计服务用户 5000+ 人次",
-                expect_flagged=True)
-
-    # 案例 5：升级技术级别（了解→精通）
-    _test_check("技能升级：了解→精通",
-                original="了解 LangChain",
-                revised="精通 LangChain",
-                expect_flagged=True)
-
-    # 案例 6：项目级包装
-    _test_check("项目级包装：生产级",
-                original="做了一个简历系统",
-                revised="做了一个生产级简历系统",
-                expect_flagged=True)
-
-    # ============== _all_2grams_in 语义级测试 ==============
-
-    # 案例 A：拉丁词+中文组合（FastAPI 框架）—— FastAPI 不在原文 → 不应容错
-    _test_2gram("拉丁词+后缀不应误判",
-                "fastapi框架",
-                "使用 flask 开发接口",  # 原文只有 flask
-                expect=False)
-
-    # 案例 B：中文子串散落（"大语言模型" vs "大数据"+"语言理解"）
-    _test_2gram("散落单字不应通过容错",
-                "大语言模型",
-                "做大数据分析和自然语言理解",
-                expect=False)
-
-    # 案例 C：词序反转应该容错
-    _test_2gram("词序反转应通过容错",
-                "训练大模型",
-                "用大模型做训练",
-                expect=True)
+        results.append((name, result_label, flagged, fact_warning))
 
     return results
 
 
 if __name__ == "__main__":
-    results = run_all()
+    results = run()
+
+    full_pass = sum(1 for _, r, _, _ in results if r == "FULL_PASS")
+    partial = sum(1 for _, r, _, _ in results if r == "PARTIAL_PASS" or r == "PASS")
+    fail = sum(1 for _, r, _, _ in results if r == "FAIL")
+
     print("=" * 70)
-    print("fact_check 语义级回归测试")
+    print("fact_check 语义级回归测试 v2（核对拦截原因）")
     print("=" * 70)
 
-    pass_count = sum(1 for _, _, ok, _, _ in results if ok)
-    total = len(results)
-
-    for cat, name, ok, detail, summary in results:
-        tag = "PASS" if ok else "FAIL"
-        print(f"  [{tag}] {name}")
-        if not ok:
-            if cat == "fact_check":
-                flagged = detail
-                print(f"         fact_check.flagged={flagged}（期望值未满足）")
-                if summary:
-                    print(f"         summary={summary}")
-            else:
-                print(f"         实际返回 {detail}")
+    for name, r, flagged, warning in results:
+        if r == "FAIL":
+            tag = "❌ FAIL"
+        elif r == "PARTIAL_PASS":
+            tag = "⚠️ PARTIAL"
+        elif r == "FULL_PASS":
+            tag = "✅ FULL"
+        else:
+            tag = "✅ PASS"
+        print(f"  {tag}  {name}")
+        if r in ("FAIL", "PARTIAL_PASS") or warning:
+            print(f"         flagged={flagged}  fact_warning=\"{warning}\"")
 
     print()
-    print(f"结果: {pass_count}/{total} PASS")
-    print()
+    print(f"完整识别 (FULL_PASS): {full_pass}")
+    print(f"碰巧拦截 / 仅 flagged 对 (PARTIAL/PASS): {partial}")
+    print(f"FAIL: {fail}")
 
-    # 打印盲区分析
-    blind_spots = []
-    for cat, name, ok, detail, summary in results:
-        if not ok:
-            blind_spots.append(name)
-
-    if blind_spots:
-        print("⚠️ 以下场景是 fact_check 的已知盲区（需要后续增强）：")
-        for b in blind_spots:
-            print(f"  • {b}")
-    else:
-        print("✅ 当前 fact_check 无盲区")
+    # 盲区摘要
+    blind = [name for name, r, _, _ in results if r == "FAIL"]
+    partial_list = [name for name, r, _, _ in results if r == "PARTIAL_PASS"]
+    if blind or partial_list:
+        print()
+        print("⚠️ 需要关注的盲区：")
+        for b in blind:
+            print(f"  ❌ FAIL: {b}")
+        for p in partial_list:
+            print(f"  ⚠️ PARTIAL（拦截了但原因不对）: {p}")

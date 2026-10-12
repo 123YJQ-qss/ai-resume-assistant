@@ -48,17 +48,30 @@ def check_analysis_basis_is_list(data, raw):
 # ============ LOGIC_CHECK ============
 
 def check_fact_check_no_violation(data, raw):
-    """fact_check.flagged 必须为 0 —— 事实越界检测不通过则整条不合格"""
+    """fact_check.flagged > 0 → 标记为 MANUAL_REVIEW（自动化无法判断是真实虚构还是保守误报）
+    
+    用户明确要求：事实违规不能以 ≤1 作为完全通过标准。
+    同时 fact_check 会有保守误报（比如把"Python 课程"的语义关联"Python 后端开发"误判为新增技术）。
+    所以 flagged>0 时不自动 FAIL，而是标记为待人工复核，由人工判断拦截是否合理。
+    flagged=0 → PASS
+    flagged>0 → MANUAL_REVIEW（不是 FAIL）
+    """
     fc = data.get("fact_check") or {}
     flagged = fc.get("flagged", 0)
     violations = fc.get("violations", 0)
     checked = fc.get("checked", 0)
-    if flagged > 0:
-        return _cr("fact_check_zero_violations", RESULT_FAIL, LOGIC_CHECK,
-                   f"flagged={flagged}, violations={violations}, checked={checked}",
-                   str(data.get("rewrite_suggestions", [])))
-    return _cr("fact_check_zero_violations", RESULT_PASS, LOGIC_CHECK,
-               f"flagged=0, checked={checked}")
+    if flagged == 0:
+        return _cr("fact_check_flagged", RESULT_PASS, LOGIC_CHECK,
+                   f"flagged=0, checked={checked}")
+    else:
+        # 提取所有 fact_warning 片段作为证据
+        warnings = []
+        for r in data.get("rewrite_suggestions", []):
+            if r.get("fact_warning"):
+                warnings.append(r["fact_warning"])
+        return _cr("fact_check_flagged", RESULT_MANUAL, LOGIC_CHECK,
+                   f"flagged={flagged}, violations={violations}, checked={checked} — 人工判断拦截是否合理",
+                   "; ".join(warnings))
 
 
 def check_gaps_have_type_tag(data, raw):

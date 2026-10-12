@@ -60,3 +60,4 @@ backend/_regression_report.json
 
 # eval 运行产物（源码在 backend/eval/*.py）
 backend/eval/eval_report.json
+backend/eval/full_evidence/

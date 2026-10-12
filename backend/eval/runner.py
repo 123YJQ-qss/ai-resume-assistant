@@ -12,6 +12,7 @@ import sys, os, json, time, argparse
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import urllib.request
+import subprocess
 
 from eval import (
     CheckResult, TestCase,
@@ -22,6 +23,22 @@ from eval.assertions import check_no_forbidden_fake_graduation
 
 API_URL = "https://ai-resume-assistant-so11.onrender.com/api/analyze"
 TIMEOUT = 240
+
+# Traceability: 从后端配置读模型信息
+MODEL_NAME = "deepseek-chat"  # 从 backend/config.py 确认
+AGENT_WORKFLOW_VERSION = "v1"  # Agent Workflow 版本号
+
+def _get_git_head():
+    try:
+        head = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=os.path.join(os.path.dirname(__file__), "..", ".."),
+            stderr=subprocess.DEVNULL,
+        ).decode().strip()
+        short = head[:8]
+        return head, short
+    except Exception:
+        return "unknown", "unknown"
 
 
 def call_api(resume_text, jd_text):
@@ -52,7 +69,7 @@ def run_case(case):
             category="HARD_ASSERT",
             details=f"API 调用失败: {api_result['error']}"
         ))
-        return {"case_id": case["case_id"], "api": api_result, "checks": results}
+        return {"case_id": case["case_id"], "api": api_result, "checks": results, "_raw_response": {}}
 
     raw = api_result["response"]
     data = raw.get("data", {})
@@ -147,6 +164,7 @@ def run_case(case):
         "human_expect": he,
         "api_elapsed": api_result["elapsed"],
         "checks": results,
+        "_raw_response": raw,
         "evidence_summary": {
             "match_level": data.get("match_level"),
             "rewrite_count": len(data.get("rewrite_suggestions") or []),
@@ -178,13 +196,28 @@ def main():
     print(f"目标: {API_URL}")
     print(f"时间: {time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Case 数: {len(cases)}")
+
+    head_full, head_short = _get_git_head()
+    print(f"Commit: {head_short}")
+    print(f"模型: {MODEL_NAME}")
     print("=" * 70)
 
     report = {
-        "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
-        "api_url": API_URL,
+        "metadata": {
+            "timestamp": time.strftime('%Y-%m-%d %H:%M:%S'),
+            "api_url": API_URL,
+            "git_commit_full": head_full,
+            "git_commit_short": head_short,
+            "model_name": MODEL_NAME,
+            "agent_workflow_version": AGENT_WORKFLOW_VERSION,
+            "eval_framework_version": "v2",
+        },
         "cases": [],
     }
+
+    # 完整证据本地保存目录（不进 git，用于人工复核）
+    full_evidence_dir = os.path.join(os.path.dirname(__file__), "full_evidence")
+    os.makedirs(full_evidence_dir, exist_ok=True)
 
     # 汇总统计
     total_pass = 0
@@ -210,6 +243,25 @@ def main():
             "evidence_summary": cr.get("evidence_summary", {}),
         }
         report["cases"].append(report_case)
+
+        # 完整脱敏证据保存（不进 git，用于人工复核时看完整 response）
+        try:
+            raw_resp = cr.get("_raw_response") or {}
+            safe_id = case["case_id"].replace("/", "_")
+            with open(os.path.join(full_evidence_dir, f"{safe_id}.json"), "w", encoding="utf-8") as fe:
+                json.dump({
+                    "case_id": case["case_id"],
+                    "timestamp": report["metadata"]["timestamp"],
+                    "git_commit": head_full,
+                    "model": MODEL_NAME,
+                    # 输入（脱敏：虚构姓名已脱敏，这里仅截断）
+                    "resume_text": case["resume_text"][:500],
+                    "job_description": case["job_description"][:500],
+                    # 完整 response
+                    "raw_response": raw_resp,
+                }, fe, ensure_ascii=False, indent=2)
+        except Exception:
+            pass  # 证据保存失败不影响主流程
 
         has_fail = False
         for chk in cr["checks"]:

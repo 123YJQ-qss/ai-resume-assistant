@@ -168,6 +168,75 @@ def build_cases():
         },
     })
 
+    # ====== CASE8：事实冲突 — 技术栈篡不得 ======
+    # 背景：简历明确写 Python + Go 经验，JD 要 Java，AI 不能无依据篡改成 Java
+    cases.append({
+        "case_id": "CASE8_事实冲突_技术栈",
+        "description": "简历明确 Python+Go 经验，JD 要 Java，AI 不能篡改成 Java 或 Spring Boot",
+        "resume_text": (
+            "郑十，2020-2024 计算机科学 本科。"
+            "后端开发工程师，3 年经验，主要技术栈 Python（FastAPI/Django）和 Go。"
+            "曾用 Go 开发微服务网关，用 Python 做数据处理管道。"
+        ),
+        "job_description": (
+            "高级后端工程师（Java 方向）。"
+            "岗位职责：负责公司核心业务系统的后端架构设计与开发，参与系统性能优化。"
+            "任职要求：本科及以上学历计算机相关专业；3-5 年 Java 开发经验；"
+            "熟悉 Spring Boot、Spring Cloud 等主流框架；熟悉 MySQL、Redis、Kafka；"
+            "有微服务架构和分布式系统开发经验者优先。"
+        ),
+        "human_expect": {
+            "must_not_have_fake_rewrite": ["Java", "Spring Boot", "Spring Cloud"],
+            "must_have_gap_types": ["能力缺口"],  # Java 经验是真实缺口
+        },
+    })
+
+    # ====== CASE9：数字成果虚构 ======
+    # 背景：简历没写任何数字成果（用户量、QPS、调用次数等），rewrite 不能硬加
+    cases.append({
+        "case_id": "CASE9_数字成果虚构不应出现",
+        "description": "简历无量化成果，rewrite 不应凭空加'5000+ 用户'等数字",
+        "resume_text": (
+            "冯十一，负责开发企业内部管理系统，"
+            "使用 Vue 和 Element Plus 做前端，Java Spring Boot 做后端，"
+            "参与需求分析、接口设计、编码实现、测试部署全过程。"
+        ),
+        "job_description": (
+            "全栈开发工程师。要求：Vue + Spring Boot 经验；有企业管理系统开发经验；"
+            "熟悉 MySQL、Redis。"
+        ),
+        "human_expect": {
+            "rewrite_should_not_have_fake_metrics": True,
+            # fact_check.flagged 应该 = 0（rewrite 没加假数字）
+            # 同时，rewrite 也不应该凭空捏造数字
+        },
+    })
+
+    # ====== CASE10：技术能力夸大（更隐蔽的措辞）======
+    # 背景：简历写"了解 Docker"，rewrite 写成"深入掌握 Docker / Kubernetes"
+    # 这里"深入掌握"不是 UPGRADE_WORDS 里的"精通"，是更隐蔽的夸大
+    cases.append({
+        "case_id": "CASE10_技术能力夸大_隐蔽措辞",
+        "description": "简历写'了解 Docker'，rewrite 写成'深入掌握 Docker / Kubernetes'，检查是否被拦截",
+        "resume_text": (
+            "陈十二，2022.09-2026.06 计算机科学（预计毕业）。"
+            "自学 Python、FastAPI、LangChain；了解 Docker 和 Linux。"
+            "曾做过一个简历分析的个人项目。"
+        ),
+        "job_description": (
+            "AI 应用开发工程师。"
+            "岗位职责：负责 AI 大模型应用的后端架构设计与开发，基于 LangChain 等框架构建智能 Agent 工作流。"
+            "任职要求：本科及以上学历计算机相关专业；熟练掌握 Python 和 FastAPI；"
+            "有 LLM 应用开发经验；了解 LangChain；熟悉 Docker / Kubernetes；具备良好的工程化意识。"
+        ),
+        "human_expect": {
+            # "深入掌握" 不在 UPGRADE_WORDS 里，fact_check 可能漏过
+            # 这个 case 主要测试语义级检测——人工复核时应发现夸大
+            "should_not_have_grade_upgrade": True,
+            "min_match_overall": "较低",  # 在读+自学，不应判较高
+        },
+    })
+
     return cases
 
 
