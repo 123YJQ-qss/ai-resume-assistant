@@ -573,7 +573,8 @@ function renderKeyGaps(data) {
     const allGaps = [];
     (data.analysis_basis || []).forEach(dim => {
         (dim.items || []).forEach(item => {
-            if (item.type === 'gap') {
+            // 兜底：任何非 'match' 的 item 都视为 gap（与 renderAnalysisBasis 一致）
+            if (item.type !== 'match') {
                 allGaps.push({
                     content: item.content,
                     degree: item.match_degree || '低',
@@ -626,7 +627,7 @@ function renderAnalysisBasis(analysisBasis) {
 
     body.innerHTML = analysisBasis.map((dim, dimIdx) => {
         const matchItems = dim.items.filter(i => i.type === 'match');
-        const gapItems = dim.items.filter(i => i.type === 'gap');
+        const gapItems = dim.items.filter(i => i.type !== 'match');
         const hasMatch = matchItems.length > 0;
         const hasGap = gapItems.length > 0;
 
@@ -748,7 +749,9 @@ function renderWeaknessesWithFallback(weaknesses, analysisBasis) {
         const gapItems = [];
         for (const dim of analysisBasis) {
             for (const item of (dim.items || [])) {
-                if (item.type === 'gap' && item.content) {
+                // 兜底：任何非 'match' 的 item 都视为 gap（与 renderAnalysisBasis 保持一致）
+                // LLM 偶尔返回非标准 type 值（如 "gap "、"风险"、"不足"），不能严格等 'gap'
+                if (item.type !== 'match' && item.content) {
                     gapItems.push(item);
                 }
             }
