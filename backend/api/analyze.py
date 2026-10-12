@@ -246,8 +246,11 @@ def normalize_result(data):
             ):
                 filtered.append(item)
         rewrite_suggestions = filtered
+        _rewrite_debug = {"raw": len(raw_rewrites), "kept": len(filtered), "dropped": len(raw_rewrites) - len(filtered)}
+        _logger.info(f"rewrite_filter: raw={len(raw_rewrites)} kept={len(filtered)} dropped={len(raw_rewrites)-len(filtered)}")
     else:
         rewrite_suggestions = []
+        _rewrite_debug = {"raw": 0, "kept": 0, "dropped": 0}
 
     result = {
         "match_level": {
@@ -274,6 +277,7 @@ def normalize_result(data):
             "supplement": clean_array_field(s.get("additions")),
             "expression": clean_array_field(s.get("optimizations")),
         }
+    result["debug"] = {"rewrite_filter": _rewrite_debug}
     return result
 
 
