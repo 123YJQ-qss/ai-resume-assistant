@@ -392,6 +392,11 @@ function setLoadingStep(stepNum, status) {
  * @param {string} warning - 警告信息
  */
 function renderAnalysisResult(data, dataSource, warning) {
+    // 设置 localStorage 命名空间 key（用后端传过来的 resume_fragments 或从全局取）
+    // 注意：resume_fragments 里有简历原文片段，用它做 hash 就能区分不同简历
+    const keySource = data?.resume_fragments?.join('') || '';
+    _setScopeKey(keySource, dataSource);
+
     // 清空所有静态占位内容，确保动态渲染
     clearResultPage();
 
@@ -850,15 +855,35 @@ function copyRewrite(btn, idx) {
 }
 window.copyRewrite = copyRewrite;
 
-/** 本地持久化 key */
-const _LS_REWRITE_STATE = 'ai_resume_rewrite_state';
+/** 本地持久化：按"简历+JD"哈希做命名空间，避免跨分析继承状态 */
+const _LS_PREFIX = 'ai_resume_state_';
+let _LS_SCOPE = ''; // 当前作用域 key（在 renderAnalysisResult 时设置）
+
+function _hash(s) {
+    // 简易哈希，够用即可（不是加密）
+    let h = 0;
+    for (let i = 0; i < s.length; i++) {
+        h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h).toString(16);
+}
+
+function _setScopeKey(resumeText, jdText) {
+    if (resumeText) {
+        _LS_SCOPE = _hash((resumeText + '|' + jdText).slice(0, 1000));
+    } else {
+        _LS_SCOPE = '';
+    }
+}
 
 function _loadRewriteState() {
-    try { return JSON.parse(localStorage.getItem(_LS_REWRITE_STATE)) || {}; }
+    if (!_LS_SCOPE) return {};
+    try { return JSON.parse(localStorage.getItem(_LS_PREFIX + _LS_SCOPE)) || {}; }
     catch { return {}; }
 }
 function _saveRewriteState(state) {
-    try { localStorage.setItem(_LS_REWRITE_STATE, JSON.stringify(state)); } catch {}
+    if (!_LS_SCOPE) return;
+    try { localStorage.setItem(_LS_PREFIX + _LS_SCOPE, JSON.stringify(state)); } catch {}
 }
 
 /** 采纳改写（本地持久化） */

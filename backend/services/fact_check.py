@@ -121,9 +121,27 @@ def _all_2grams_in(source_norm, target_norm):
     """检查 source_norm 的所有 2-gram 是否都在 target_norm 中出现。
 
     用于容忍词序变化（"大模型训练" vs "训练大模型"）或拆分表达。
+
+    v2 改进：对中文技术词改用单字 multiset 检查（要求 source 的每个中文字
+    都在 target 里出现），因为纯 2-gram 串联对词序反转不鲁棒。
+    拉丁技术词仍用 2-gram（防止"fast" 匹配到 "fastapi" 这种假阳性）。
     """
     if len(source_norm) < 2:
         return source_norm in target_norm
+
+    # 拉丁词（≥ 3 个连续拉丁字符）→ 用严格 2-gram（或直接包含）
+    latin_run = _LATIN_RUN_RE.search(source_norm)
+    if latin_run and latin_run.end() - latin_run.start() >= 3:
+        # 拉丁技术词：直接检查整串是否在 target 里（已经在外面做了检查，这里保底）
+        return source_norm in target_norm
+
+    # 中文技术词：单字 multiset 检查
+    # 要求 source_norm 每个字符（除拉丁字符）都在 target_norm 里出现过
+    chinese_chars = [c for c in source_norm if '\u4e00' <= c <= '\u9fff']
+    if len(chinese_chars) >= 2:
+        return all(c in target_norm for c in chinese_chars)
+
+    # 其他：退回到 2-gram
     for i in range(len(source_norm) - 1):
         gram = source_norm[i:i+2]
         if gram not in target_norm:

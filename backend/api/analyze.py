@@ -171,7 +171,9 @@ def _rewrite_has_substantive_change(original, revised):
     检测规则：
     1. 完全相同 → 丢弃
     2. revised 长度比 original 长 > 30% 且尾部追加了独立短句（逗号/句号结尾） → 可能是空泛追加
-    3. 字符级差异率（以较长者为基准）< 10% → 改动太小，丢弃
+    3. 字符级差异率（以较长者为基准）< 15% 且涉及措辞升级 → 丢弃
+       （如：熟悉→精通、参与→主导、了解→掌握 等单/双字升级）
+    4. 只有标点/空格微调 → 丢弃
     """
     if not original or not revised:
         return False
@@ -180,22 +182,41 @@ def _rewrite_has_substantive_change(original, revised):
     if o == r:
         return False
 
-    # 计算字符级差异（基于 set 交集粗略估算，不是精确 diff）
+    # 措辞升级词对（原文出现左侧，改写出现右侧 → 无其他实质变化则丢弃）
+    _UPGRADE_PAIRS = [
+        ("熟悉", "精通"), ("掌握", "精通"), ("了解", "精通"),
+        ("参与", "主导"), ("参与", "独立负责"), ("协助", "负责"),
+        ("基础", "丰富"), ("初步", "深入"),
+    ]
+    # 计算实际改动字数
     longer = max(len(o), len(r))
+    shorter = min(len(o), len(r))
     if longer == 0:
         return False
-    # 简单的差异估计：用包含关系
+
+    # 先做包含关系检查
     if r in o or o in r:
-        # 一个是另一个的子串 → 差异很小
-        diff_ratio = abs(len(o) - len(r)) / longer
+        diff_ratio = (longer - shorter) / longer
         if diff_ratio < 0.15:
+            # 子串包含 + 差异很小 → 基本相同
+            return False
+
+    # 检查措辞升级类微改动
+    # 统计 revised 中替换了多少词
+    changed_words = 0
+    for left, right in _UPGRADE_PAIRS:
+        if left in o and right in r and right not in o:
+            changed_words += 1
+    # 如果只改了 ≤ 2 个升级词且总差异率 < 25% → 丢弃
+    if changed_words > 0 and changed_words <= 2:
+        # 粗略估计差异率
+        diff_ratio = abs(len(o) - len(r)) / longer
+        if diff_ratio < 0.25:
             return False
 
     # 检查是否只在尾部追加了短句
     if len(r) > len(o) * 1.3:
-        # 看 revised 去掉 original 内容后剩下的部分
         remaining = r.replace(o, "").strip()
-        # 如果剩下的很短（< 15 字）且是评价性短语
         _EMPTY_PHRASES = [
             "体现了", "保障了", "有利于", "支持", "有助于",
             "具备较强", "具有较好", "展现了", "展示了",
