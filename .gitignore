@@ -54,3 +54,6 @@ evaluation/results/*.json
 
 # 根目录临时脚本（rag_knowledge.py 是遗留，backend/rag/rag_knowledge.py 才是正式版）
 rag_knowledge.py
+backend/_regression_local.py
+backend/_regression_api.py
+backend/_regression_report.json
