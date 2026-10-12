@@ -594,30 +594,110 @@ function switchTab(tabName) {
 window.switchTab = switchTab;
 
 /**
- * 渲染关键差距 Top3
+ * 渲染关键差距 Top3 —— v2：支持 requirement_matches + category 权重 + 同组归并
+ *
+ * 优先级逻辑：
+ * 1. 如果后端提供了 requirement_matches → 用 category + match_status 联合排序
+ *    同时同 capability_group 的工具缺口做归并（如 Coze/Dify/n8n → "低代码 Agent 平台经验"）
+ * 2. 否则回退到旧逻辑（analysis_basis.gap 按 match_degree 排序）
  */
 function renderKeyGaps(data) {
     const body = document.getElementById('gapContent');
     if (!body) return;
 
-    const allGaps = [];
-    (data.analysis_basis || []).forEach(dim => {
-        (dim.items || []).forEach(item => {
-            // 兜底：任何非 'match' 的 item 都视为 gap（与 renderAnalysisBasis 一致）
-            if (item.type !== 'match') {
-                allGaps.push({
-                    content: item.content,
-                    degree: item.match_degree || '低',
-                    dimension: dim.dimension || ''
+    let gapCandidates = [];
+
+    // ========== 路径1：使用 requirement_matches（v2 新逻辑） ==========
+    const rms = data.requirement_matches;
+    if (rms && rms.length > 0) {
+        const CAT_WEIGHT = { 'hard': 0, 'core': 1, 'preferred': 2 };
+        const STATUS_WEIGHT = { 'not_met': 0, 'unverified': 1, 'partial_match': 2, 'direct_match': 3 };
+
+        // 只取 gap 类型（非 direct_match），按 (category, status) 排序
+        gapCandidates = rms
+            .filter(rm => rm.match_status && rm.match_status !== 'direct_match')
+            .map(rm => ({
+                content: rm.requirement_text || '',
+                category: rm.category || 'preferred',
+                match_status: rm.match_status,
+                transferable_from: rm.transferable_from,
+                transferable_boundary: rm.transferable_boundary,
+                match_reason: rm.match_reason,
+                categoryWeight: CAT_WEIGHT[rm.category] ?? 2,
+                statusWeight: STATUS_WEIGHT[rm.match_status] ?? 2,
+                isHard: rm.category === 'hard',
+                isNotMet: rm.match_status === 'not_met',
+            }))
+            // 排序：先 category（hard 最优先），再 status（not_met > unverified > partial）
+            .sort((a, b) => (a.categoryWeight - b.categoryWeight) || (a.statusWeight - b.statusWeight));
+
+        // 同组归并：如果有多个属于同一大类的 preferred unverified（如 Coze/Dify/n8n），合并
+        const mergedGroups = [];
+        const PREFERRED_TOOL_MERGE = {
+            '低代码平台': ['coze', 'dify', 'n8n', 'fastgpt', '扣子', '低代码'],
+            '向量数据库': ['llamaindex', 'chroma', 'pinecone', 'milvus', 'weaviate'],
+            'Agent框架': ['autogen', 'crewai', 'langgraph'],
+        };
+
+        const mergeable = gapCandidates.filter(g =>
+            g.category === 'preferred' &&
+            g.match_status === 'unverified' &&
+            !g.isHard && !g.isNotMet
+        );
+        const nonMergeable = gapCandidates.filter(g => !mergeable.includes(g));
+
+        // 检查 mergeable 中是否有可归并的组
+        if (mergeable.length >= 2) {
+            let merged = false;
+            for (const [groupName, keywords] of Object.entries(PREFERRED_TOOL_MERGE)) {
+                const groupItems = mergeable.filter(g => {
+                    const text = (g.content || '').toLowerCase();
+                    return keywords.some(kw => text.includes(kw));
                 });
+                if (groupItems.length >= 2) {
+                    // 合并为一条
+                    mergedGroups.push({
+                        content: `${groupName}经验待确认（可通过现有相关能力部分迁移）`,
+                        category: 'preferred',
+                        match_status: 'unverified',
+                        categoryWeight: 2,
+                        statusWeight: 1,
+                        _merged: true,
+                    });
+                    // 标记已合并的项
+                    for (const g of groupItems) g._consumed = true;
+                    merged = true;
+                }
             }
+            if (merged) {
+                const remaining = mergeable.filter(g => !g._consumed);
+                gapCandidates = [...nonMergeable, ...mergedGroups, ...remaining];
+                // 重新排序
+                gapCandidates.sort((a, b) => (a.categoryWeight - b.categoryWeight) || (a.statusWeight - b.statusWeight));
+            }
+        }
+    }
+
+    // ========== 路径2：回退到旧逻辑（无 requirement_matches） ==========
+    if (gapCandidates.length === 0) {
+        (data.analysis_basis || []).forEach(dim => {
+            (dim.items || []).forEach(item => {
+                if (item.type !== 'match') {
+                    gapCandidates.push({
+                        content: item.content,
+                        degree: item.match_degree || '低',
+                        dimension: dim.dimension || '',
+                        categoryWeight: 2,  // 旧路径统一当作 core 处理
+                        statusWeight: 1,
+                    });
+                }
+            });
         });
-    });
+        const degreePriority = { '低': 0, '中': 1, '高': 2 };
+        gapCandidates.sort((a, b) => (degreePriority[a.degree] || 0) - (degreePriority[b.degree] || 0));
+    }
 
-    const degreePriority = { '低': 0, '中': 1, '高': 2 };
-    allGaps.sort((a, b) => (degreePriority[a.degree] || 0) - (degreePriority[b.degree] || 0));
-
-    const topGaps = allGaps.slice(0, 3);
+    const topGaps = gapCandidates.slice(0, 3);
 
     if (topGaps.length === 0) {
         body.innerHTML = '<p class="placeholder-text">暂未发现关键差距 ✨</p>';
@@ -627,6 +707,30 @@ function renderKeyGaps(data) {
     body.innerHTML = topGaps.map((gap, idx) => {
         const parsed = parseTypeTag(gap.content);
         const tag = typeTagStyle(parsed.type);
+
+        // v2: category 和 status 信息用于前端展示（可选）
+        let categoryLabel = '';
+        if (gap.category === 'hard') categoryLabel = '🔴 硬性门槛';
+        else if (gap.category === 'core') categoryLabel = '🟠 核心能力';
+        else if (gap.category === 'preferred') categoryLabel = '🟢 加分项';
+
+        let statusLabel = '';
+        if (gap.match_status === 'not_met') statusLabel = '明确不满足';
+        else if (gap.match_status === 'unverified') statusLabel = '待确认';
+        else if (gap.match_status === 'partial_match') statusLabel = '部分匹配';
+
+        // 如果有迁移边界说明，展示出来
+        let transferNote = '';
+        if (gap.transferable_from && gap.transferable_boundary) {
+            transferNote = `<div class="gap-transfer" data-tip="可迁移能力：${gap.transferable_from}；能力边界：${gap.transferable_boundary}">🔄 可部分迁移</div>`;
+        }
+        // 如果是硬性门槛不满足，明确警示
+        if (gap.isHard && gap.isNotMet) {
+            transferNote = `<div class="gap-transfer gap-hard-block" data-tip="硬性门槛不满足，可能在简历筛选阶段被直接淘汰">⚠️ 硬性门槛不满足</div>`;
+        }
+
+        const degreeInfo = gap.degree ? `<span class="gap-level">匹配度：${gap.degree}</span>` : '';
+
         return `
         <div class="gap-item">
             <span class="gap-num">${idx + 1}</span>
@@ -634,8 +738,10 @@ function renderKeyGaps(data) {
                 <div class="gap-content">${parsed.text || gap.content}</div>
                 <div class="gap-meta">
                     ${parsed.type ? `<span class="gap-type ${tag.cls}">${tag.label}</span>` : ''}
-                    <span class="gap-dim">${gap.dimension}</span>
-                    <span class="gap-level">匹配度：${gap.degree}</span>
+                    ${categoryLabel ? `<span class="gap-cat">${categoryLabel}</span>` : ''}
+                    ${statusLabel ? `<span class="gap-status">${statusLabel}</span>` : ''}
+                    ${transferNote}
+                    ${degreeInfo}
                 </div>
             </div>
         </div>

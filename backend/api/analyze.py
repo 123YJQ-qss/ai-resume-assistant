@@ -40,9 +40,25 @@ __RESUME__
 【最高原则】
 在不改变、不新增、不虚构用户事实的前提下，最大化真实岗位匹配度。宁可匹配度显得低，也不允许虚构。
 
-【证据等级与准入】
-rewrite_suggestions 只允许基于简历原文事实的条目（A 已有事实 / B 基于事实的合理概括）。
-能力推断（C）、当前缺口（D）、建议实践（E）禁止进入 rewrite_suggestions，只能写入 optimization_advice.supplement。
+【JD 要求分类 —— 先分类，再匹配】
+hard（硬性门槛）：只有 JD 明确写明、不可替代的准入条件（学历硬门槛、工作年限硬门槛、法律/资格证书、签证要求）。注意：Python/Java/Agent 等技术经验通常归入 core，不因岗位名是 Python 工程师就自动成 hard。
+core（核心岗位能力）：岗位核心工作所需的技术和能力，决定适配度的主要依据。
+preferred（加分）：JD 以"优先/加分"表述的条件。preferred 未满足不应拖累核心匹配度。
+
+【每条要求的匹配状态】
+direct_match：简历有直接证据。
+partial_match：有相似技术/可迁移能力但不完整。技术迁移**只能支持 partial_match**，不能等同于 direct_match。必须保留能力边界。
+unverified：简历没足够证据（没提到≠不具备）。
+not_met：有反向证据明确不满足（如 JD 要求硕士，简历明确本科）。
+
+【综合匹配等级（定性，不用数字阈值）】
+先看 hard：如果有 hard 被判 not_met → 风险"风险较高"，overall 不高于"中等"。
+再看 core：绝大多数 core 有 direct_match 或有可迁移 partial_match → 方向匹配。
+preferred 全部 unverified 不应拖累到"较低"。
+区分能力适配 vs 表达质量：能力基本满足但简历表达弱 → 不应给太低，而是指出表达问题。
+- 较高：无 hard not_met，core 绝大多数有 direct_match 证据。即使表达弱也应较高（表达问题单独指出）。
+- 中等：方向相关但有重要 core 处于 unverified，或有 hard not_met。
+- 较低：有 hard not_met 且关键阻断，或 core 大量 unverified。
 
 【禁止项】（相对简历原文而言）
 1. 禁止新增简历中不存在的技术栈、职责、用户数量、项目级别
@@ -53,13 +69,19 @@ rewrite_suggestions 只允许基于简历原文事实的条目（A 已有事实 
 6. 禁止混淆技术概念（JSON Schema≠Tool Calling，RAG≠准确率提升）
 7. JD 要求但简历未体现的技术：不得建议写进简历，写入 supplement 并注明"当前简历未体现该技术实践"
 
+【weaknesses 分类标注】
+- [表达优化]：可能具备但表述不清晰，可改写改善
+- [事实待确认]：JD 要求但简历无足够证据，需候选人自己确认
+- [能力缺口]：不能证明具备该技能，需学习/实践
+
+【Top3 关键差距排序】：综合考虑 category（hard>core>preferred）、match_status、招聘影响。同组工具缺口归并（Coze/Dify 合并为"低代码 Agent 平台"）。
+
+【rewrite_suggestions 准入】：只允许 evidence_grade A/B。C/D/E 进入 supplement。
+
 【输出要求】
 1. 严格按照下面的JSON格式返回，不要添加任何解释文字
 2. 所有字符串值中不要包含双引号、大括号等特殊字符，如需引用原文请用书名号《》或单引号
-3. rewrite_suggestions 中的 original 字段必须是从上方【简历内容】中摘录的真实原文，不得编造
-4. basis 字段必须说明改写依据：引用简历原文 + 对应JD要求 + 改写逻辑
-5. revised 只能在 original 的事实范围内重写，只使用原文已出现的技术词
-6. 用 ```json 代码块包裹整个JSON返回
+3. 用 ```json 代码块包裹整个JSON返回
 
 【返回格式示例】
 ```json
@@ -70,38 +92,51 @@ rewrite_suggestions 只允许基于简历原文事实的条目（A 已有事实 
     "experience": "较强/中等/较弱",
     "risk": "需要优化/风险较低/风险较高"
   },
+  "requirement_matches": [
+    {
+      "requirement_id": "req-001",
+      "requirement_text": "要求简述",
+      "category": "hard/core/preferred",
+      "match_status": "direct_match/partial_match/unverified/not_met",
+      "evidence": "简历原文引用",
+      "confidence": "high/medium/low",
+      "transferable_from": null,
+      "transferable_boundary": null,
+      "match_reason": "判断理由"
+    }
+  ],
   "analysis_basis": [
     {
-      "dimension": "维度名称（如：AI产品设计能力）",
+      "dimension": "能力维度名",
       "items": [
         {
           "type": "match",
-          "content": "匹配项内容描述",
+          "content": "匹配描述",
           "quote": "简历原文引用",
           "match_degree": "高/中/低"
         },
         {
           "type": "gap",
-          "content": "待补充项内容描述",
+          "content": "[类型标记]差距描述",
           "match_degree": "高/中/低"
         }
       ]
     }
   ],
-  "strengths": ["优势1：具体描述", "优势2：具体描述"],
-  "weaknesses": ["不足1：具体描述", "不足2：具体描述"],
+  "strengths": ["优势1：具体描述"],
+  "weaknesses": ["[类型标记]不足1：具体描述"],
   "rewrite_suggestions": [
     {
       "original": "必须摘录自简历原文",
       "revised": "仅在原文事实范围内的优化表达",
       "evidence_grade": "A或B",
-      "basis": "依据说明：简历原文为《XXX》，JD要求XXX，因此改写为XXX"
+      "basis": "依据说明"
     }
   ],
   "optimization_advice": {
-    "highlight": ["建议突出经历1：具体说明", "建议突出经历2：具体说明"],
-    "supplement": ["建议补充信息1：具体说明", "建议补充信息2：具体说明"],
-    "expression": ["建议优化表达1：原表达→建议表达", "建议优化表达2：原表达→建议表达"]
+    "highlight": ["建议突出：说明"],
+    "supplement": ["[类型标记]建议内容"],
+    "expression": ["原表达→建议表达"]
   }
 }
 ```
@@ -233,6 +268,9 @@ def normalize_result(data):
         rewrite_suggestions = []
         _rewrite_debug = {"raw": 0, "kept": 0, "dropped": 0}
 
+    # requirement_matches：来自 Match Agent 的逐条匹配结果（可选字段，向后兼容）
+    requirement_matches = clean_array_field(data.get("requirement_matches"))
+
     result = {
         "match_level": {
             "overall": ml.get("overall") or "待评估",
@@ -240,6 +278,7 @@ def normalize_result(data):
             "experience": ml.get("experience") or "待评估",
             "risk": ml.get("risk") or "待评估",
         },
+        "requirement_matches": requirement_matches,
         "analysis_basis": clean_array_field(data.get("analysis_basis")),
         "strengths": clean_array_field(data.get("strengths")),
         "weaknesses": clean_array_field(data.get("weaknesses")),
@@ -385,6 +424,7 @@ def _run_workflow(resume_content, job_description):
 
         merged = normalize_result({
             "match_level": match_result.get("match_level"),
+            "requirement_matches": match_result.get("requirement_matches"),
             "analysis_basis": match_result.get("analysis_basis"),
             "strengths": match_result.get("strengths"),
             "weaknesses": match_result.get("weaknesses"),

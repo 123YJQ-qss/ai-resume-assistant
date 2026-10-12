@@ -54,6 +54,14 @@ supplement 中的每条建议必须以以下标记之一开头：
 - [能力缺口]：现有资料不能证明具备该技能，需要通过学习/项目实践/新经验补足，**不能直接改写成已有经历**
 - [需补充真实信息]：简历缺失学历、工作时间、具体项目成果等可补充的真实事实
 
+【supplement 生成的 category 权重指引】
+match_result 中可能包含 requirement_matches（逐条匹配结果），每条有 category（hard/core/preferred）。
+- 对 core 类能力的缺口（unverified/not_met）→ 正常生成 supplement，作为重点改进建议
+- 对 hard 类的明确不满足（not_met）→ 生成 supplement 并明确标注"硬性门槛"
+- 对 preferred 类的 unverified → 一般**不生成**高优先级 supplement（加分项，无需强制满足），
+  只在特别相关时轻提一句，避免制造大量"需要优化"的错觉
+- partial_match 的迁移能力 → 不生成 supplement（已通过能力迁移部分满足），如果简历表达不足则生成 [表达优化]
+
 【证据等级定义】（每条 rewrite_suggestion 必须标注 evidence_grade）
 - A【已有事实】：简历中明确存在，可直接使用。
 - B【基于事实的合理概括】：仅改变表达方式，不增加任何新事实。
