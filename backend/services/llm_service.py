@@ -164,6 +164,54 @@ class LLMService:
         self._log_tokens(usage)
         return full_content
 
+    # ---------------- Tool Calling 支持 ----------------
+
+    def chat_with_tools(self, messages, tools=None, tool_choice="auto"):
+        """带 tool_calls 支持的 LLM 调用（OpenAI 兼容协议，DeepSeek 完全支持）。
+
+        参数：
+            messages: [{"role":"system","content":"..."}, {"role":"user",...},
+                       {"role":"tool","name":"...","tool_call_id":"...","content":"..."}]
+            tools: OpenAI 兼容 tools schema 列表（可选，None = 纯 chat）
+            tool_choice: "auto" / "required" / "none"
+
+        返回 dict：
+            {"content": str | None, "tool_calls": list | None}
+        """
+        url = self._openai_url()
+        headers = {
+            "Authorization": "Bearer " + self._api_key(),
+            "Content-Type": "application/json",
+        }
+        body = {
+            "model": self._model(),
+            "messages": messages,
+            "temperature": 0.2,
+        }
+        if tools:
+            body["tools"] = tools
+            body["tool_choice"] = tool_choice
+
+        last_err = None
+        for attempt in range(self.max_retries + 1):
+            try:
+                with httpx.Client(timeout=self.timeout) as client:
+                    resp = client.post(url, headers=headers, json=body)
+                    resp.raise_for_status()
+                    data = resp.json()
+                msg = ((data.get("choices") or [{}])[0].get("message", {}))
+                self._log_tokens(data.get("usage"))
+                return {
+                    "content": msg.get("content"),
+                    "tool_calls": msg.get("tool_calls"),
+                }
+            except Exception as e:
+                last_err = e
+                if attempt < self.max_retries:
+                    wait = min(2 ** attempt, 8)
+                    time.sleep(wait)
+        raise RuntimeError(f"tool_chat 调用失败（已重试{self.max_retries}次）：{last_err}")
+
     # ---------------- JSON 解析 ----------------
 
     def parse_json_from_text(self, content):
@@ -267,3 +315,7 @@ def run_agent(agent_name, prompt):
 
 def parse_json_from_text(content):
     return LLM_SERVICE.parse_json_from_text(content)
+
+
+def chat_with_tools(messages, tools=None, tool_choice="auto"):
+    return LLM_SERVICE.chat_with_tools(messages, tools, tool_choice)

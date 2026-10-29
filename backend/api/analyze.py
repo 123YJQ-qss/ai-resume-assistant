@@ -508,7 +508,33 @@ def _run_single_prompt(resume_content, job_description):
 
 
 def analyze_resume(resume_content, job_description):
-    """简历分析入口：优先走多 Agent Workflow，失败自动降级到单 Prompt 流程"""
+    """简历分析入口：tool_agent（可选）→ workflow（默认）→ 单 Prompt（兜底）"""
+    AGENT_MODE = os.getenv("AGENT_MODE", "workflow").strip().lower()
+
+    # 路径 1：Tool Calling Agent（实验性）
+    if AGENT_MODE == "tool_calling":
+        try:
+            _logger.info("event=analyze_start  path=tool_calling")
+            from agents import tool_agent
+            result = tool_agent.run(job_description, resume_content)
+            # 补 data_source 标记，便于前端识别
+            result["data_source"] = "tool_agent"
+            return result
+        except Exception as e:
+            _logger.warning(f"event=tool_agent_failed  exc_type={type(e).__name__}  "
+                            f"exc={str(e)[:200]}  path=fallback_to_workflow")
+            # tool agent 失败 → 回退到 workflow（继续走原来的路径）
+            try:
+                return _run_workflow(resume_content, job_description)
+            except Exception as e2:
+                _logger.warning(f"event=workflow_failed_after_tool_fallback  "
+                                f"exc_type={type(e2).__name__}  path=fallback_to_single_prompt")
+                result = _run_single_prompt(resume_content, job_description)
+                if result.get("data_source") == "mock_fallback":
+                    result.setdefault("debug", {})["workflow_error"] = f"{type(e2).__name__}: {str(e2)[:200]}"
+                return result
+
+    # 路径 2：原有四阶段 workflow（默认）
     try:
         _logger.info("event=analyze_start  path=workflow")
         return _run_workflow(resume_content, job_description)
@@ -516,7 +542,6 @@ def analyze_resume(resume_content, job_description):
         _logger.warning(f"event=workflow_failed  exc_type={type(e).__name__}  "
                         f"exc={str(e)[:200]}  path=fallback_to_single_prompt")
         result = _run_single_prompt(resume_content, job_description)
-        # 把原始异常挂上去，便于前端/调用方排查
         if result.get("data_source") == "mock_fallback":
             result.setdefault("debug", {})["workflow_error"] = f"{type(e).__name__}: {str(e)[:200]}"
         return result
