@@ -359,6 +359,44 @@ def build_data_source(kind):
     return f"{llm_service.get_provider()}_{kind}"
 
 
+def _post_process(raw_result, resume_content, job_description):
+    """Tool Agent / Workflow 共用的后处理链路：fact_check → normalize → evidence。
+
+    保证两种模式输出经过相同的 schema 校验与事实校验。
+    """
+    # fact_check：规则式越界检测
+    jd_terms = fact_check.extract_jd_terms({"核心技能": [], "技术要求": [], "岗位关键词": []})
+    # 如果 raw_result 里有 JD 解析信息（来自 tool_agent 的 parse_jd），优先用
+    if raw_result.get("_jd_analysis"):
+        jd_terms = fact_check.extract_jd_terms(raw_result["_jd_analysis"])
+
+    opt_result = {"rewrite_suggestions": raw_result.get("rewrite_suggestions", [])}
+    opt_result, fact_summary = fact_check.check_rewrite_suggestions(
+        opt_result, resume_content,
+        resume_tech=None,
+        jd_terms=jd_terms,
+    )
+
+    merged = normalize_result({
+        "match_level": raw_result.get("match_level"),
+        "requirement_matches": raw_result.get("requirement_matches"),
+        "analysis_basis": raw_result.get("analysis_basis"),
+        "strengths": raw_result.get("strengths"),
+        "weaknesses": raw_result.get("weaknesses"),
+        "rewrite_suggestions": opt_result.get("rewrite_suggestions"),
+        "optimization_advice": raw_result.get("optimization_advice"),
+    })
+    merged["fact_check"] = fact_summary
+
+    # evidence：挂简历原文证据
+    try:
+        merged = evidence.attach_evidence(merged, resume_content)
+    except Exception as e:
+        _logger.warning(f"event=evidence_failed  exc_type={type(e).__name__}")
+
+    return merged
+
+
 def _run_workflow(resume_content, job_description):
     """多 Agent Workflow 主流程 —— LangChain Runnable 编排
 
@@ -516,8 +554,9 @@ def analyze_resume(resume_content, job_description):
         try:
             _logger.info("event=analyze_start  path=tool_calling")
             from agents import tool_agent
-            result = tool_agent.run(job_description, resume_content)
-            # 补 data_source 标记，便于前端识别
+            raw_result = tool_agent.run(job_description, resume_content)
+            # 走与 workflow 完全相同的后处理：fact_check → normalize → evidence
+            result = _post_process(raw_result, resume_content, job_description)
             result["data_source"] = "tool_agent"
             return result
         except Exception as e:

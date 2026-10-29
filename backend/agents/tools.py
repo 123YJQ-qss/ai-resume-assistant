@@ -133,27 +133,37 @@ TOOLS_SCHEMA = [
 
 # Tool dispatch：根据 name 路由到内部实现
 def execute_tool(name, arguments):
-    """执行指定 tool，返回 string（喂回给 LLM 的 role=tool 消息）。"""
+    """执行指定 tool，返回 string（喂回给 LLM 的 role=tool 消息）。
+
+    最外层 try-except 兜底，任何异常都返回错误 JSON 字符串，
+    保证 tool 调用不会 500，错误信息作为 tool_result 喂回 LLM 继续循环。
+    """
     try:
         args = _json.loads(arguments) if isinstance(arguments, str) else arguments
     except Exception:
         args = {}
 
-    if name == "parse_jd":
-        result = _parse_jd(args.get("jd_text", ""))
-    elif name == "search_knowledge":
-        result = _search_knowledge(
-            args.get("query", ""),
-            args.get("top_k", 3),
-        )
-    elif name == "check_facts":
-        result = _check_facts(
-            args.get("original_text", ""),
-            args.get("proposed_rewrite", ""),
-            args.get("jd_terms", []),
-        )
-    else:
-        result = {"error": f"未知工具: {name}"}
+    try:
+        if name == "parse_jd":
+            result = _parse_jd(args.get("jd_text", ""))
+        elif name == "search_knowledge":
+            result = _search_knowledge(
+                args.get("query", ""),
+                args.get("top_k", 3),
+            )
+        elif name == "check_facts":
+            result = _check_facts(
+                args.get("original_text", ""),
+                args.get("proposed_rewrite", ""),
+                args.get("jd_terms", []),
+            )
+        else:
+            result = {"error": f"未知工具: {name}"}
+    except Exception as e:
+        result = {"error": f"tool 执行异常[{name}]: {type(e).__name__}: {str(e)[:200]}"}
 
     # 返回 JSON 字符串（LLM 的 tool 消息 content 必须是 string）
-    return _json.dumps(result, ensure_ascii=False, default=str)
+    try:
+        return _json.dumps(result, ensure_ascii=False, default=str)
+    except Exception:
+        return _json.dumps({"error": "tool 结果序列化失败"}, ensure_ascii=False)
