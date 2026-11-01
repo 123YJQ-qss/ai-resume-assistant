@@ -547,6 +547,8 @@ def _run_single_prompt(resume_content, job_description):
 
 def analyze_resume(resume_content, job_description):
     """简历分析入口：tool_agent（可选）→ workflow（默认）→ 单 Prompt（兜底）"""
+    from services import llm_service
+    llm_service.reset_token_accum()
     AGENT_MODE = os.getenv("AGENT_MODE", "workflow").strip().lower()
 
     # 路径 1：Tool Calling Agent（实验性）

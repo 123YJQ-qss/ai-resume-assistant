@@ -225,6 +225,10 @@ def run(job_description: str, resume_content: str) -> dict:
     total_ms = int((time.time() - t_start) * 1000)
     if meta_enabled:
         meta["latency_ms"] = total_ms
+        # 从 llm_service 拿累计 token 用量（analyze_resume 入口已 reset）
+        accum = llm_service.get_token_accum()
+        meta["prompt_tokens"] = accum["prompt_tokens"]
+        meta["completion_tokens"] = accum["completion_tokens"]
         _logger.info(f"[AGENT_META] {_json.dumps(meta, ensure_ascii=False)}")
 
     _logger.info(f"event=tool_agent_done  rounds={meta['rounds']}  latency_ms={total_ms}")

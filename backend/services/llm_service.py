@@ -41,6 +41,7 @@ class LLMService:
     def __init__(self):
         self.timeout = self.TIMEOUT
         self.max_retries = self.MAX_RETRIES
+        self._token_accum = {"prompt_tokens": 0, "completion_tokens": 0}
 
     # ---------------- 配置 ----------------
 
@@ -274,25 +275,30 @@ class LLMService:
 
     # ---------------- token 统计 ----------------
 
-    @staticmethod
-    def _log_tokens(usage):
+    def _log_tokens(self, usage):
+        """累加 token 用量到 self._token_accum，然后打印。"""
         if not usage:
             return
-        if "prompt_tokens" in usage or "completion_tokens" in usage:  # OpenAI 兼容
+        pt = usage.get("prompt_tokens", 0) or usage.get("input_count", 0) or 0
+        ct = usage.get("completion_tokens", 0) or usage.get("output_count", 0) or 0
+        self._token_accum["prompt_tokens"] += pt
+        self._token_accum["completion_tokens"] += ct
+        if pt or ct:
             print(
                 "[LLM] token统计: "
-                f"prompt={usage.get('prompt_tokens')}, "
-                f"completion={usage.get('completion_tokens')}, "
-                f"total={usage.get('total_tokens')}"
+                f"prompt={pt}, "
+                f"completion={ct}, "
+                f"total={usage.get('total_tokens') or usage.get('token_count') or pt + ct}"
             )
-            return
-        # Coze 格式
-        print(
-            "[LLM] token统计: "
-            f"input={usage.get('input_count')}, "
-            f"output={usage.get('output_count')}, "
-            f"total={usage.get('token_count')}"
-        )
+
+    def reset_token_accum(self):
+        """清零 token 累加器（每次 analyze_resume 入口调）。"""
+        self._token_accum["prompt_tokens"] = 0
+        self._token_accum["completion_tokens"] = 0
+
+    def get_token_accum(self):
+        """返回当前累计 token 用量的副本。"""
+        return dict(self._token_accum)
 
 
 # 单例
@@ -317,5 +323,13 @@ def parse_json_from_text(content):
     return LLM_SERVICE.parse_json_from_text(content)
 
 
+def reset_token_accum():
+    LLM_SERVICE.reset_token_accum()
+
+
+def get_token_accum():
+    return LLM_SERVICE.get_token_accum()
+
+
 def chat_with_tools(messages, tools=None, tool_choice="auto"):
-    return LLM_SERVICE.chat_with_tools(messages, tools, tool_choice)
+    return LLM_SERVICE.chat_with_tools(messages, tools=tools, tool_choice=tool_choice)
